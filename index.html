@@ -14983,73 +14983,92 @@ mkDay({ day:30, phase:'Interview Execution', difficulty:'senior',
    Handbook mode (topics, coding problems, machine coding, system design,
    projects, mock interview). No new learning content is invented here —
    only the game layer (zone metadata, boss composition, unlock proof).
+
+   Each level names its OWN explicit mission list — requiredTopics,
+   requiredCoding, requiredLabs are ids from the real data files. A level's
+   boss unlocks only once every mission on ITS OWN list is complete.
+   Work done in a different zone (a different category, a different id)
+   never counts toward this level — there is no global/shared counter.
+   Topic missions are driven by the 4-stage mission engine (Learn → Recall
+   → Practise → Complete, see 51_quest_engine.js); coding/lab missions are
+   considered complete once that item's real tracked progress reaches a
+   solved/confident state — no separate proof object duplicates that.
    ========================================================================= */
 
 const QUEST_LEVELS = [
   { id:1, zone:'HTML Village', title:'HTML Scout',
     description:'Restore the foundation: semantic structure, forms and accessibility.',
     topicCategory:'html',
-    requirements:{ topicPct:0.7 },
+    requiredTopics:['html-semantic-html','html-forms-validation','html-accessibility-aria','html-seo-fundamentals','html-images-responsive','html-script-loading','html-storage-cookies','html-dom-fundamentals'],
+    requiredCoding:[], requiredLabs:[],
     boss:{ type:'quiz', category:'html', duration:15,
       description:'Defend an accessible registration form — 15 minutes of HTML/accessibility questions, no notes.' } },
 
   { id:2, zone:'CSS Workshop', title:'CSS Builder',
     description:'Rebuild the layout systems: box model, flexbox, grid, responsive design.',
     topicCategory:'css',
-    requirements:{ topicPct:0.7 },
+    requiredTopics:['css-box-model','css-specificity-cascade','css-positioning','css-flexbox','css-grid','css-responsive-design','css-stacking-context-zindex','css-performance-architecture'],
+    requiredCoding:[], requiredLabs:[],
     boss:{ type:'quiz', category:'css', duration:15,
       description:'Defend a responsive dashboard layout — 15 minutes of CSS questions, no notes.' } },
 
   { id:3, zone:'JavaScript Forest', title:'JavaScript Fighter',
     description:'Sharpen core JavaScript: scope, closures, the event loop, promises.',
     topicCategory:'javascript',
-    requirements:{ topicPct:0.7, codingRequired:6, codingPassRequired:4 },
+    requiredTopics:['js-scope-variables','js-type-coercion-equality','js-functions-closures-hoisting','js-this-call-apply-bind','js-objects-prototypes-classes','js-promises-async-await','js-iterators-generators','js-gc-deep-shallow-copy'],
+    requiredCoding:['cp-01','cp-02','cp-03','cp-04','cp-07','cp-08'], requiredLabs:[],
     boss:{ type:'coding', codingIds:['cp-09','cp-10','cp-11'],
       description:'Implement map, filter and reduce from scratch — pass every test without hints.' } },
 
   { id:4, zone:'TypeScript Armoury', title:'TypeScript Guardian',
     description:'Forge type safety: generics, discriminated unions, API and form typing.',
     topicCategory:'typescript',
-    requirements:{ topicPct:0.7, codingRequired:3, codingPassRequired:2 },
+    requiredTopics:['ts-structural-typing','ts-interfaces-vs-type-aliases','ts-unions-intersections','ts-generics','ts-utility-types','ts-narrowing-guards-discriminated-unions'],
+    requiredCoding:['cp-23','cp-27','cp-34'], requiredLabs:[],
     boss:{ type:'coding', codingIds:['cp-32','cp-33','cp-24'],
       description:'Build a type-safe result wrapper, a generic pick utility and an immutable nested update — pass every test.' } },
 
   { id:5, zone:'React City', title:'React Engineer',
     description:'Rebuild the UI layer: hooks, rendering, forms, component architecture.',
     topicCategory:'react',
-    requirements:{ topicPct:0.7, labsRequired:3 },
+    requiredTopics:['react-component-model-jsx-props-state','react-controlled-uncontrolled','react-rendering-reconciliation-keys','react-custom-hooks','react-usestate-useeffect-useref','react-usememo-usecallback-memo','react-usereducer-context','react-stale-closures-cleanup-race-conditions'],
+    requiredCoding:[], requiredLabs:['lab-01','lab-02','lab-06','lab-12'],
     boss:{ type:'machinecoding', refId:'mc-09',
       description:'Build a searchable, paginated, accessible data table in 60 minutes — then defend your design decisions.' } },
 
   { id:6, zone:'Next.js Territory', title:'Next.js Architect',
     description:'Restore routing and rendering: App Router, Server/Client Components, caching.',
     topicCategory:'nextjs',
-    requirements:{ topicPct:0.7 },
+    requiredTopics:['nextjs-app-router-layouts','nextjs-server-client-components','nextjs-rendering-strategies','nextjs-route-handlers-middleware','nextjs-data-fetching-cache-revalidation','nextjs-hydration-errors-seo'],
+    requiredCoding:[], requiredLabs:['lab-03','lab-14','lab-15','lab-16'],
     boss:{ type:'systemdesign', refId:'sd-01',
       description:'Design a Next.js-powered admin dashboard and defend every architecture decision.' } },
 
   { id:7, zone:'Integration Zone', title:'Product Integrator',
     description:'Wire the system to the outside world: REST, auth, RBAC, payments, WebSockets.',
     topicCategory:'api',
-    requirements:{ topicPct:0.6 },
+    requiredTopics:['api-rest-contracts','api-axios-interceptors-cancellation-retries','api-pagination-filtering-sorting','api-optimistic-updates-cache-invalidation','api-websockets-realtime','api-auth-tokens-refresh-rbac-flags','api-forms-uploads-payments','api-loading-empty-error-partial-states'],
+    requiredCoding:[], requiredLabs:['lab-04','lab-08','lab-09','lab-17'],
     boss:{ type:'quiz', category:'api', duration:20,
       description:'20 minutes of API, auth and payment questions — no notes, no hand-waving.' } },
 
   { id:8, zone:'Architecture Tower', title:'Senior Frontend Architect',
     description:'Prove senior judgment: state ownership, performance, testing, security trade-offs.',
     topicCategory:'performance',
-    requirements:{ topicPct:0.6 },
+    requiredTopics:['perf-bundle-code-splitting-lazy','perf-memoization-render-optimization','perf-image-network-caching','perf-virtualization','perf-web-vitals-lighthouse','perf-measure-before-optimize','testing-pyramid-unit-integration-e2e','testing-mocking-apis','testing-what-not-to-test-flaky-prevention'],
+    requiredCoding:['cp-19','cp-27','cp-35'], requiredLabs:['lab-07','lab-11','lab-20'],
     boss:{ type:'systemdesign', refId:'sd-03',
       description:'Design a scalable, multi-role marketplace frontend and defend every trade-off.' } },
 
   { id:9, zone:'Project Arena', title:'Project Defender',
     description:'Defend your four real projects against follow-up questions — no invented numbers, no backend ownership claims.',
-    requirements:{},
+    requiredTopics:[], requiredCoding:[], requiredLabs:[],
     boss:{ type:'project',
       description:'Survive follow-up questions on ProCoach, KhetiValah, RDR Tech and SGreens ERP.' } },
 
   { id:10, zone:'Final Interview', title:'Interview Arena',
     description:'The final gauntlet: a full mixed interview, timed and self-scored.',
+    requiredTopics:[], requiredCoding:[], requiredLabs:[],
     requirements:{ minReadiness:40 },
     boss:{ type:'mockinterview',
       description:'Clear 15, 30, 45 and 60-minute mixed rounds. Final boss: 60 minutes, average self-score of at least 4/5, with no unanswered core project questions.' } },
@@ -15113,6 +15132,7 @@ function defaultState(){
       aloudTotalCount: 0,      // lifetime count, for the "No Notes Needed" achievement
       awardedKeys: {},         // idempotency ledger: key -> true, so no real action ever pays out XP twice
       activityLog: [],         // [{action, amount, at: ISO timestamp}] — used for date-specific daily-quest checks
+      missions: {},            // 'topic:<id>' -> {opened,recallAttempted,recallPassed,exerciseAttempted,confidence,completedAt}
     }
   };
 }
@@ -15925,6 +15945,7 @@ function validateAndSanitizeBackup(parsed){
     if(typeof q.aloudTotalCount==='number') sanitized.quest.aloudTotalCount = Math.max(0, Math.floor(q.aloudTotalCount));
     if(q.awardedKeys && typeof q.awardedKeys==='object') sanitized.quest.awardedKeys = q.awardedKeys;
     if(Array.isArray(q.activityLog)) sanitized.quest.activityLog = q.activityLog.filter(e=>e && typeof e==='object' && typeof e.at==='string').slice(-500);
+    if(q.missions && typeof q.missions==='object') sanitized.quest.missions = q.missions;
   }
 
   return { ok:true, state: sanitized, warnings, counts:{ items:itemsKept, plan:planKept, mock:mockKept } };
@@ -16209,10 +16230,11 @@ function ensureQuestState(){
   if(!STATE.quest) STATE.quest = {
     xp:0, xpLog:[], bossPassed:{}, bossAttempts:{}, achievements:[],
     dailyQuests:{date:null,bonusClaimed:false}, aloudAwardedToday:{date:null,ids:[]}, aloudTotalCount:0,
-    awardedKeys:{}, activityLog:[]
+    awardedKeys:{}, activityLog:[], missions:{}
   };
   if(!STATE.quest.awardedKeys) STATE.quest.awardedKeys = {};
   if(!STATE.quest.activityLog) STATE.quest.activityLog = [];
+  if(!STATE.quest.missions) STATE.quest.missions = {};
   return STATE.quest;
 }
 
@@ -16265,24 +16287,81 @@ function showXPPopup(amount, reason){
   setTimeout(()=>{ el.classList.add('xp-popup-fade'); setTimeout(()=>el.remove(), 500); }, 1700);
 }
 
-/* ---------------------- derived counts (used by requirements + achievements) ---------------------- */
-function categoryTopicPct(category){
-  const ids = TOPICS.filter(t=>t.category===category).map(t=>t.id);
-  if(!ids.length) return 1;
-  const done = ids.filter(id=>{ const s=getItem('topic',id).status; return s==='confident'||s==='mastered'; }).length;
-  return done/ids.length;
+/* ---------------------- mission engine: topic missions ---------------------- */
+/* Learn -> Recall -> Practise -> Complete. This proof object is the ONLY
+   thing level-progress reads for a topic mission. Marking a topic
+   "Confident" in Handbook mode still works and still awards its own XP
+   (see setItemStatus in 10_core.js) — it just never, by itself, finishes
+   a mission or unlocks a boss. Only walking through all four stages here
+   does that. */
+function ensureMissionProof(topicId){
+  const q = ensureQuestState();
+  if(!q.missions) q.missions = {};
+  const key = 'topic:'+topicId;
+  if(!q.missions[key]) q.missions[key] = { opened:false, recallAttempted:false, recallPassed:null, exerciseAttempted:false, confidence:null, completedAt:null };
+  return q.missions[key];
 }
-function codingAttemptedCount(){
-  return CODING_PROBLEMS.filter(c=>{
-    const p = getItem('coding',c.id).codingProgress || 'not_viewed';
-    return ['attempted','tests_partial','solved_no_help','solved_with_hints'].indexOf(p)!==-1;
-  }).length;
+function getMissionProof(topicId){
+  const q = ensureQuestState();
+  return (q.missions && q.missions['topic:'+topicId]) || null;
 }
-function codingSolvedCount(){
-  return CODING_PROBLEMS.filter(c=>{
-    const p = getItem('coding',c.id).codingProgress || 'not_viewed';
-    return p==='solved_no_help' || p==='solved_with_hints';
-  }).length;
+function missionStage(topicId){
+  const m = getMissionProof(topicId);
+  if(!m || !m.opened) return 'learn';
+  if(!m.recallAttempted) return 'recall';
+  if(!m.exerciseAttempted) return 'practise';
+  if(!m.completedAt) return 'complete';
+  return 'done';
+}
+function markMissionOpened(topicId){
+  const m = ensureMissionProof(topicId);
+  if(m.opened) return;
+  m.opened = true;
+  saveState();
+}
+function markMissionRecall(topicId, passed){
+  const m = ensureMissionProof(topicId);
+  if(m.recallAttempted) return;
+  m.recallAttempted = true;
+  m.recallPassed = !!passed;
+  saveState();
+  const title = typeof itemTitle==='function' ? itemTitle('topic',topicId) : topicId;
+  awardXP(10, `Recalled: ${title}`, `mission:topic:${topicId}:recall`);
+}
+function markMissionPractise(topicId){
+  const m = ensureMissionProof(topicId);
+  if(m.exerciseAttempted) return;
+  m.exerciseAttempted = true;
+  saveState();
+  const title = typeof itemTitle==='function' ? itemTitle('topic',topicId) : topicId;
+  awardXP(15, `Practised: ${title}`, `mission:topic:${topicId}:practise`);
+}
+/* completeTopicMission: only reachable once the first three stages are
+   proven. confidenceStatus is one of the Handbook status values the user
+   picks at this final step (needs_revision/confident/mastered) — the
+   mission itself only completes on confident/mastered; picking
+   needs_revision leaves it awaiting a future retry without losing the
+   already-proven Learn/Recall/Practise stages. */
+function completeTopicMission(topicId, confidenceStatus){
+  const m = ensureMissionProof(topicId);
+  if(!(m.opened && m.recallAttempted && m.exerciseAttempted)) return false;
+  m.confidence = confidenceStatus;
+  const done = confidenceStatus==='confident' || confidenceStatus==='mastered';
+  if(done && !m.completedAt) m.completedAt = todayISO();
+  saveState();
+  return done;
+}
+function isTopicMissionComplete(topicId){
+  const m = getMissionProof(topicId);
+  return !!(m && m.completedAt);
+}
+function isCodingMissionComplete(id){
+  const p = getItem('coding', id).codingProgress || 'not_viewed';
+  return p==='solved_no_help' || p==='solved_with_hints';
+}
+function isLabMissionComplete(id){
+  const s = getItem('lab', id).status;
+  return s==='confident' || s==='mastered';
 }
 function codingSolvedNoHelpCount(){
   return CODING_PROBLEMS.filter(c=> getItem('coding',c.id).codingProgress==='solved_no_help').length;
@@ -16296,28 +16375,52 @@ function codingSolvedNoHelpToday(){
     return it.codingProgress==='solved_no_help' && it.updatedAt===today;
   });
 }
-function labsConfidentCount(){
-  return LABS.filter(l=>{ const s=getItem('lab',l.id).status; return s==='confident'||s==='mastered'; }).length;
-}
 
-/* ---------------------- levels: unlock + requirement + status ---------------------- */
+/* ---------------------- levels: each level's OWN explicit mission list ---------------------- */
+/* levelMissionList/levelMissionProgress read ONLY the ids named on the
+   level itself (requiredTopics/requiredCoding/requiredLabs in
+   50_quest_data.js) — never a global total. Work in a different zone,
+   on a different id, never counts here. */
+function levelMissionList(level){
+  const list = [];
+  (level.requiredTopics||[]).forEach(id=> list.push({ type:'topic', id }));
+  (level.requiredCoding||[]).forEach(id=> list.push({ type:'coding', id }));
+  (level.requiredLabs||[]).forEach(id=> list.push({ type:'lab', id }));
+  return list;
+}
+function isMissionItemComplete(item){
+  if(item.type==='topic') return isTopicMissionComplete(item.id);
+  if(item.type==='coding') return isCodingMissionComplete(item.id);
+  if(item.type==='lab') return isLabMissionComplete(item.id);
+  return false;
+}
+function levelMissionProgress(level){
+  const items = levelMissionList(level).map(m=> Object.assign({}, m, { done: isMissionItemComplete(m) }));
+  const done = items.filter(m=>m.done).length;
+  return { items, done, total: items.length };
+}
 function isLevelUnlocked(levelId){
   if(levelId===1) return true;
   const q = ensureQuestState();
   return !!q.bossPassed[levelId-1];
 }
 function levelRequirementsMet(level){
+  const prog = levelMissionProgress(level);
+  const missionsOk = prog.total===0 || prog.done===prog.total;
   const req = level.requirements||{};
-  if(req.topicCategory===undefined && level.topicCategory){ /* topicCategory lives on level, pct req in requirements */ }
-  const topicOk = !level.topicCategory || categoryTopicPct(level.topicCategory) >= (req.topicPct!=null?req.topicPct:0.7);
-  const codingOk = !req.codingRequired || (codingAttemptedCount()>=req.codingRequired && codingSolvedCount()>=(req.codingPassRequired||0));
-  const labsOk = !req.labsRequired || labsConfidentCount()>=req.labsRequired;
   const readinessOk = !req.minReadiness || computeReadinessScore().total >= req.minReadiness;
-  return topicOk && codingOk && labsOk && readinessOk;
+  return missionsOk && readinessOk;
 }
 function levelAnyProgress(level){
-  if(level.topicCategory){
-    return TOPICS.some(t=> t.category===level.topicCategory && getItem('topic',t.id).status!=='not_started');
+  const prog = levelMissionProgress(level);
+  if(prog.total>0){
+    if(prog.done>0) return true;
+    return prog.items.some(item=>{
+      if(item.type==='topic'){ const p=getMissionProof(item.id); return !!(p && (p.opened||p.recallAttempted||p.exerciseAttempted)); }
+      if(item.type==='coding') return (getItem('coding',item.id).codingProgress||'not_viewed')!=='not_viewed';
+      if(item.type==='lab') return (getItem('lab',item.id).status||'not_started')!=='not_started';
+      return false;
+    });
   }
   if(level.id===9){
     return PROJECTS.some(p=> p.questions.some(q=> getItem('project',q.id).status!=='not_started'));
@@ -18638,26 +18741,50 @@ function renderQuestMap(){
   `;
 }
 
-/* ---------------------- Level Detail ---------------------- */
-function renderLevelExtraRequirements(level){
-  const req = level.requirements||{};
-  const parts = [];
-  if(req.codingRequired){
-    const attempted = Math.min(codingAttemptedCount(), req.codingRequired);
-    parts.push(`<div><div class="flex justify-between small"><span>Coding problems attempted</span><span>${codingAttemptedCount()}/${req.codingRequired}</span></div><div class="progress-track mt-8"><div class="progress-fill" style="width:${pct(attempted,req.codingRequired)}%"></div></div></div>`);
-    const solved = Math.min(codingSolvedCount(), req.codingPassRequired||0);
-    parts.push(`<div class="mt-8"><div class="flex justify-between small"><span>Coding problems solved</span><span>${codingSolvedCount()}/${req.codingPassRequired}</span></div><div class="progress-track mt-8"><div class="progress-fill" style="width:${pct(solved,req.codingPassRequired||1)}%"></div></div></div>`);
-  }
-  if(req.labsRequired){
-    const done = Math.min(labsConfidentCount(), req.labsRequired);
-    parts.push(`<div class="mt-8"><div class="flex justify-between small"><span>Labs completed</span><span>${labsConfidentCount()}/${req.labsRequired}</span></div><div class="progress-track mt-8"><div class="progress-fill" style="width:${pct(done,req.labsRequired)}%"></div></div></div>`);
-  }
-  if(req.minReadiness){
-    const r = computeReadinessScore().total;
-    parts.push(`<div class="mt-8"><div class="flex justify-between small"><span>Overall readiness score</span><span>${r}%/${req.minReadiness}%</span></div><div class="progress-track mt-8"><div class="progress-fill" style="width:${pct(Math.min(r,req.minReadiness),req.minReadiness)}%"></div></div></div>`);
-  }
-  if(!parts.length) return '';
-  return `<div class="card mt-16"><h3 class="card-title">Proof required to unlock the boss</h3>${parts.join('')}</div>`;
+/* ---------------------- Level Detail: sequential mission list ---------------------- */
+const MISSION_TYPE_LABEL = { topic:'Topic', coding:'Coding problem', lab:'Lab' };
+const MISSION_TYPE_ROUTE = { topic:'topics', coding:'javascript-coding', lab:'react-labs' };
+function missionItemTitle(item){
+  if(item.type==='topic'){ const t=findById(TOPICS,item.id); return t?t.title:item.id; }
+  if(item.type==='coding'){ const c=findById(CODING_PROBLEMS,item.id); return c?c.title:item.id; }
+  if(item.type==='lab'){ const l=findById(LABS,item.id); return l?l.title:item.id; }
+  return item.id;
+}
+function renderMissionList(level){
+  const list = levelMissionList(level);
+  if(!list.length) return '';
+  let firstIncompleteSeen = false;
+  const rows = list.map(item=>{
+    const done = isMissionItemComplete(item);
+    let rowState = 'done';
+    if(!done){ rowState = firstIncompleteSeen ? 'pending' : 'current'; firstIncompleteSeen = true; }
+    const title = missionItemTitle(item);
+    const typeLabel = MISSION_TYPE_LABEL[item.type];
+    let action;
+    if(item.type==='topic'){
+      action = done
+        ? `data-nav="topics/${encodeURIComponent(item.id)}"`
+        : `data-nav="quest-mission/${encodeURIComponent(level.id+'::'+item.id)}"`;
+    } else {
+      action = `data-nav="${MISSION_TYPE_ROUTE[item.type]}/${encodeURIComponent(item.id)}"`;
+    }
+    const badge = done ? `<span class="badge badge-basic">Complete</span>`
+      : rowState==='current' ? `<span class="badge badge-accent">Up next</span>`
+      : `<span class="badge badge-outline">Not started</span>`;
+    return `<div class="item-row clickable" style="cursor:pointer;" ${action}>
+      <span class="small"><span class="faint">${typeLabel}:</span> ${escapeHtml(title)}</span>
+      ${badge}
+    </div>`;
+  }).join('');
+  const doneCount = list.filter(isMissionItemComplete).length;
+  return `
+    <div class="card mt-16">
+      <div class="flex justify-between items-center"><h3 class="card-title">Missions</h3><span class="small faint">${doneCount}/${list.length} complete</span></div>
+      <div class="progress-track mt-8"><div class="progress-fill" style="width:${pct(doneCount,list.length)}%"></div></div>
+      <div class="flex flex-col gap-8 mt-12">${rows}</div>
+      ${level.requirements&&level.requirements.minReadiness? `<p class="small faint mt-8">Also requires overall readiness score ≥ ${level.requirements.minReadiness}% (currently ${computeReadinessScore().total}%).</p>` : ''}
+    </div>
+  `;
 }
 function renderQuestLevel(levelIdStr){
   const levelId = parseInt(levelIdStr,10);
@@ -18669,8 +18796,6 @@ function renderQuestLevel(levelIdStr){
       <p class="small muted mt-8">Pass Level ${levelId-1}'s boss battle to unlock ${escapeHtml(level.title)}.</p>
       <a href="#quest" class="btn btn-ghost mt-16">Back to Quest Map</a></div>`;
   }
-  const missions = level.topicCategory ? TOPICS.filter(t=>t.category===level.topicCategory) : [];
-  const missionsDone = missions.filter(t=>{ const s=getItem('topic',t.id).status; return s==='confident'||s==='mastered'; }).length;
 
   return `
     <a href="#quest" class="small">← Back to Quest Map</a>
@@ -18680,16 +18805,7 @@ function renderQuestLevel(levelIdStr){
     </div>
     <p class="page-sub">${escapeHtml(level.description)}</p>
 
-    ${missions.length? `
-    <div class="card">
-      <div class="flex justify-between items-center"><h3 class="card-title">Missions</h3><span class="small faint">${missionsDone}/${missions.length} confident or better</span></div>
-      <div class="progress-track mt-8"><div class="progress-fill" style="width:${pct(missionsDone,missions.length)}%"></div></div>
-      <div class="grid grid-3 mt-12">
-        ${missions.map(t=>{ const it=getItem('topic',t.id); return `<div class="card clickable" data-nav="topics/${encodeURIComponent(t.id)}" style="cursor:pointer;"><span class="status-dot status-${it.status}"></span><h3 class="card-title mt-8" style="font-size:13px;">${escapeHtml(t.title)}</h3></div>`; }).join('')}
-      </div>
-    </div>` : ''}
-
-    ${renderLevelExtraRequirements(level)}
+    ${renderMissionList(level)}
 
     <div class="card mt-16">
       <h3 class="card-title">Boss battle</h3>
@@ -18699,6 +18815,102 @@ function renderQuestLevel(levelIdStr){
   `;
 }
 ROUTES['quest'] = (param)=> param ? renderQuestLevel(param) : renderQuestMap();
+
+/* ---------------------- Mission Player: Learn -> Recall -> Practise -> Complete ---------------------- */
+let missionRecallRevealed = {};
+function renderMissionPlayer(param){
+  const [levelIdStr, topicId] = (param||'').split('::');
+  const level = QUEST_LEVELS.find(l=>l.id===parseInt(levelIdStr,10));
+  const topic = findById(TOPICS, topicId);
+  if(!level || !topic) return `<div class="empty-state">Mission not found. <a href="#quest">Back to Quest Map</a></div>`;
+  if(levelStatus(level)==='locked'){
+    return `<div class="empty-state">This zone is locked. <a href="#quest/${level.id}">Back to ${escapeHtml(level.zone)}</a></div>`;
+  }
+  const stage = missionStage(topicId);
+  const backLink = `<a href="#quest/${level.id}" class="small">← Back to ${escapeHtml(level.zone)}</a>`;
+  const stageOrder = ['learn','recall','practise','complete','done'];
+  const stageLabels = { learn:'1. Learn', recall:'2. Recall', practise:'3. Practise', complete:'4. Complete', done:'Complete' };
+  const stepper = `<div class="input-row wrap mt-8">${stageOrder.filter(s=>s!=='done').map(s=>{
+    const idx = stageOrder.indexOf(s), curIdx = stageOrder.indexOf(stage);
+    const cls = idx<curIdx || stage==='done' ? 'badge-basic' : idx===curIdx ? 'badge-accent' : 'badge-outline';
+    return `<span class="badge ${cls}">${stageLabels[s]}</span>`;
+  }).join('')}</div>`;
+
+  let body = '';
+  if(stage==='learn'){
+    body = `
+      <div class="card mt-16">
+        <h3 class="card-title">${escapeHtml(topic.title)}</h3>
+        <p class="mt-8">${escapeHtml(topic.explanation)}</p>
+        <p class="small muted mt-8"><strong>Why it matters:</strong> ${escapeHtml(topic.whyItMatters)}</p>
+        ${topic.simpleExample? `<pre class="codeblock mt-8"><code>${escapeHtml(topic.simpleExample)}</code></pre>`:''}
+        ${topic.realExample? `<p class="small mt-8"><strong>Real-world example:</strong> ${escapeHtml(topic.realExample)}</p>`:''}
+        ${topic.commonMistake? `<p class="small mt-8"><strong>Common mistake:</strong> ${escapeHtml(topic.commonMistake)}</p>`:''}
+        <button class="btn btn-primary mt-16" data-action="mission-learn-continue" data-level="${level.id}" data-topic="${topicId}">I've learned this — continue to Recall</button>
+      </div>`;
+  } else if(stage==='recall'){
+    const revealed = !!missionRecallRevealed[topicId];
+    body = `
+      <div class="card mt-16">
+        <h3 class="card-title">Recall: ${escapeHtml(topic.title)}</h3>
+        <p class="small muted mt-8">Without looking back at the explanation, explain this out loud or in your head as if answering in an interview. Then reveal a strong answer and rate yourself honestly.</p>
+        ${!revealed
+          ? `<button class="btn btn-primary mt-16" data-action="mission-recall-reveal" data-topic="${topicId}">Show a strong answer</button>`
+          : `<div class="card mt-8"><p class="small">${escapeHtml(topic.interviewAnswer)}</p></div>
+             <div class="input-row mt-16">
+               <button class="btn btn-primary" data-action="mission-recall-result" data-level="${level.id}" data-topic="${topicId}" data-passed="true">I recalled this well</button>
+               <button class="btn btn-ghost" data-action="mission-recall-result" data-level="${level.id}" data-topic="${topicId}" data-passed="false">I need to review more</button>
+             </div>`}
+      </div>`;
+  } else if(stage==='practise'){
+    body = `
+      <div class="card mt-16">
+        <h3 class="card-title">Practise: ${escapeHtml(topic.title)}</h3>
+        <p class="small muted mt-8">Do this exercise for real — in your own editor or notes — then confirm.</p>
+        <div class="card mt-8"><p class="small">${escapeHtml(topic.miniExercise)}</p></div>
+        <button class="btn btn-primary mt-16" data-action="mission-practise-done" data-level="${level.id}" data-topic="${topicId}">I did this exercise</button>
+      </div>`;
+  } else if(stage==='complete'){
+    body = `
+      <div class="card mt-16">
+        <h3 class="card-title">Rate your confidence: ${escapeHtml(topic.title)}</h3>
+        <p class="small muted mt-8">This mission only clears the zone requirement at Confident or Mastered — Needs revision keeps it open for a later retry.</p>
+        <div class="input-row wrap mt-8">
+          <button class="btn btn-ghost" data-action="mission-complete" data-level="${level.id}" data-topic="${topicId}" data-status="needs_revision">Needs revision</button>
+          <button class="btn btn-ghost" data-action="mission-complete" data-level="${level.id}" data-topic="${topicId}" data-status="confident">Confident</button>
+          <button class="btn btn-primary" data-action="mission-complete" data-level="${level.id}" data-topic="${topicId}" data-status="mastered">Mastered</button>
+        </div>
+      </div>`;
+  } else {
+    body = `<div class="good-banner mt-16">Mission complete.</div>`;
+  }
+
+  return `${backLink}<h1 class="page-title mt-8">Mission</h1>${stepper}${body}`;
+}
+ROUTES['quest-mission'] = (param)=> renderMissionPlayer(param);
+PAGE_ACTIONS['mission-learn-continue'] = (data)=>{
+  markMissionOpened(data.topic);
+  navigate('quest-mission/'+encodeURIComponent(data.level+'::'+data.topic));
+};
+PAGE_ACTIONS['mission-recall-reveal'] = (data)=>{
+  missionRecallRevealed[data.topic] = true;
+  router();
+};
+PAGE_ACTIONS['mission-recall-result'] = (data)=>{
+  markMissionRecall(data.topic, data.passed==='true');
+  delete missionRecallRevealed[data.topic];
+  navigate('quest-mission/'+encodeURIComponent(data.level+'::'+data.topic));
+};
+PAGE_ACTIONS['mission-practise-done'] = (data)=>{
+  markMissionPractise(data.topic);
+  navigate('quest-mission/'+encodeURIComponent(data.level+'::'+data.topic));
+};
+PAGE_ACTIONS['mission-complete'] = (data)=>{
+  setItemStatus('topic', data.topic, data.status);
+  const done = completeTopicMission(data.topic, data.status);
+  if(done) toast('Mission complete!'); else toast('Marked as needs revision — come back once you\'ve reviewed more.');
+  navigate('quest/'+data.level);
+};
 
 /* ---------------------- Boss card dispatch ---------------------- */
 function renderBossCard(level, status){
