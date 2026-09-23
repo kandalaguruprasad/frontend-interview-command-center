@@ -14958,6 +14958,7 @@ function defaultState(){
     items: {},        // key `${collection}:${id}` -> { status, confidence(0-5), notes, nextReview, stage, updatedAt, history:[{status,date}] }
     plan30: {},        // day(1-30) -> { tasks:{taskKey:boolean}, notes:'', rating:null }
     mock: { sessions: [] },
+    activeMock: null,  // an in-progress mock session snapshot, so a refresh doesn't lose it (see 41_mock.js)
     notes: {}          // freeform notes keyed by scope, used for generic textareas not tied to items collection (kept for future use)
   };
 }
@@ -14994,8 +14995,16 @@ function saveState(immediate){
   saveTimer = setTimeout(write, 300);
 }
 
-/* ---------------------- date utils ---------------------- */
-function todayISO(){ return new Date().toISOString().slice(0,10); }
+/* ---------------------- date utils ----------------------
+   All dates are handled as local-calendar YYYY-MM-DD strings, never UTC —
+   toISOString() converts to UTC first, which misattributes activity near
+   local midnight for any timezone ahead of UTC (e.g. India, UTC+5:30): a
+   user working at 1am IST would have it logged as "yesterday". */
+function localDateISO(d){
+  const y = d.getFullYear(), m = String(d.getMonth()+1).padStart(2,'0'), day = String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function todayISO(){ return localDateISO(new Date()); }
 function addDaysISO(iso, days){
   const d = new Date(iso+'T00:00:00');
   d.setDate(d.getDate()+days);
@@ -15398,6 +15407,9 @@ function initGlobalEvents(){
     }
     if(t.matches('[data-filter-input]') && typeof currentRefresh==='function'){
       currentRefresh();
+    }
+    if(t.matches('[data-mock-answer]') && typeof debouncedMockAnswerSave==='function'){
+      debouncedMockAnswerSave();
     }
   });
   document.addEventListener('change', (e)=>{
@@ -16168,13 +16180,14 @@ function renderCodingDetail(id){
     </div>
     <div class="card mt-16">
       <h3 class="card-title">Your solution</h3>
-      <p class="small faint">Keep the function name <code class="mono">${escapeHtml(c.functionName)}</code> — the test runner looks for it. Code executes locally in your browser only.</p>
+      <p class="small faint">Keep the function name <code class="mono">${escapeHtml(c.functionName)}</code> — the test runner looks for it. Code runs locally inside an isolated Web Worker, separate from this page and without direct DOM access, so a runaway loop in your code cannot freeze the app — the worker is force-terminated after ${CODING_TIMEOUT_MS/1000}s. This isolates and time-limits execution; it is not a full security sandbox, so still avoid pasting code you don't trust.</p>
       <textarea class="code-editor mt-8" id="editor_${c.id}" spellcheck="false">${escapeHtml(it.code!==undefined? it.code : c.starter)}</textarea>
       <div class="input-row mt-8">
-        <button class="btn btn-primary" data-action="run-tests" data-id="${c.id}">Run tests</button>
+        <button class="btn btn-primary" id="runBtn_${c.id}" data-action="run-tests" data-id="${c.id}">Run tests</button>
+        <button class="btn btn-danger btn-sm hidden" id="stopBtn_${c.id}" data-action="stop-tests" data-id="${c.id}">Stop</button>
         <button class="btn btn-ghost btn-sm" data-action="reset-editor" data-id="${c.id}">Reset to starter</button>
       </div>
-      <div id="testResults_${c.id}" class="mt-12"></div>
+      <div id="testResults_${c.id}" class="mt-12" aria-live="polite"></div>
     </div>
     <div class="card mt-16">
       <details class="disclosure"><summary>Reveal reference solution</summary>
@@ -16191,7 +16204,10 @@ function renderCodingDetail(id){
     </div>
   `;
 }
-ROUTES['javascript-coding'] = (param)=> param ? renderCodingDetail(param) : renderCodingList();
+ROUTES['javascript-coding'] = (param)=>{
+  cleanupCurrentPage = terminateActiveCodingWorker;
+  return param ? renderCodingDetail(param) : renderCodingList();
+};
 PAGE_ACTIONS['coding-filter'] = (data)=>{ codingFilter[data.key]=data.value; refreshCodingAll(); };
 PAGE_ACTIONS['reset-editor'] = (data)=>{
   const c = findById(CODING_PROBLEMS, data.id);
@@ -16199,69 +16215,184 @@ PAGE_ACTIONS['reset-editor'] = (data)=>{
   if(c && ta) ta.value = c.starter;
 };
 
-/* ---------------------- test harness ---------------------- */
-function deepEqualJSON(a,b){
-  try{ return JSON.stringify(a) === JSON.stringify(b); }catch(e){ return a===b; }
-}
-function withTimeout(promise, ms){
-  return Promise.race([
-    promise,
-    new Promise((_,rej)=>setTimeout(()=>rej(new Error('Timed out after '+ms+'ms — check for an infinite loop.')), ms))
-  ]);
-}
-async function runCodingTests(problem, code){
-  let fn;
+/* ---------------------- test harness (Web Worker sandboxed) ----------------------
+   Code runs inside a dedicated Worker created from a Blob URL. Workers have no
+   access to `document`/`window`/the app's DOM by default, so user code cannot
+   reach the page. A main-thread timer force-terminates the worker if it hangs
+   (e.g. a synchronous infinite loop) — termination from outside is the only
+   thing that can interrupt a truly blocking synchronous loop; an in-worker
+   timeout cannot, since the same thread is stuck. This isolates and time-limits
+   execution; it is not a full security sandbox (no attempt is made to stop a
+   worker from calling fetch/importScripts), so still don't paste untrusted code.
+   ------------------------------------------------------------------------- */
+const CODING_TIMEOUT_MS = 5000;
+
+const CODING_WORKER_SOURCE = `
+self.onmessage = function(e){
+  var code = e.data.code, functionName = e.data.functionName, tests = e.data.tests;
+  function deepEqualJSON(a,b){ try{ return JSON.stringify(a) === JSON.stringify(b); }catch(err){ return a===b; } }
+  var fn;
   try{
-    const factory = new Function(code + `\nreturn (typeof ${problem.functionName} !== 'undefined') ? ${problem.functionName} : undefined;`);
+    var factory = new Function(code + '\\nreturn (typeof ' + functionName + ' !== "undefined") ? ' + functionName + ' : undefined;');
     fn = factory();
-  }catch(e){
-    return { error: 'Error in your code: ' + e.message };
+  }catch(err){
+    self.postMessage({ type:'setup-error', message: 'Error in your code: ' + err.message });
+    return;
   }
   if(typeof fn !== 'function'){
-    return { error: `Could not find a function named "${problem.functionName}". Keep that exact name.` };
+    self.postMessage({ type:'setup-error', message: 'Could not find a function named "' + functionName + '". Keep that exact name.' });
+    return;
   }
-  const results = [];
-  for(const test of problem.tests){
-    try{
-      if(test.custom){
-        const customFn = new Function('fn', 'return (' + test.custom + ')(fn);');
-        const res = await withTimeout(Promise.resolve(customFn(fn)), 5000);
-        const pass = res === true;
-        results.push({ pass, desc: test.desc || 'Custom test', detail: pass? '' : String(res) });
-      } else {
-        const actual = await withTimeout(Promise.resolve(fn(...test.args)), 5000);
-        const pass = deepEqualJSON(actual, test.expected);
-        results.push({ pass, desc: test.desc || `Input: ${JSON.stringify(test.args)}`, detail: pass? '' : `Expected ${JSON.stringify(test.expected)}, got ${JSON.stringify(actual)}` });
+  (function run(){
+    var i = 0;
+    function next(){
+      if(i >= tests.length){ self.postMessage({ type:'done' }); return; }
+      var test = tests[i], idx = i; i++;
+      try{
+        var resultPromise;
+        if(test.custom){
+          var customFn = new Function('fn', 'return (' + test.custom + ')(fn);');
+          resultPromise = Promise.resolve(customFn(fn)).then(function(res){
+            var pass = res === true;
+            return { pass: pass, desc: test.desc || 'Custom test', detail: pass ? '' : String(res) };
+          });
+        } else {
+          resultPromise = Promise.resolve(fn.apply(null, test.args)).then(function(actual){
+            var pass = deepEqualJSON(actual, test.expected);
+            return { pass: pass, desc: test.desc || ('Input: ' + JSON.stringify(test.args)), detail: pass ? '' : ('Expected ' + JSON.stringify(test.expected) + ', got ' + JSON.stringify(actual)) };
+          });
+        }
+        resultPromise.catch(function(err){
+          return { pass:false, desc: test.desc || 'Test', detail: 'Threw an error: ' + (err && err.message ? err.message : String(err)) };
+        }).then(function(r){
+          self.postMessage({ type:'result', index: idx, pass: r.pass, desc: r.desc, detail: r.detail });
+          next();
+        });
+      }catch(err){
+        self.postMessage({ type:'result', index: idx, pass:false, desc: test.desc || 'Test', detail: 'Threw an error: ' + (err && err.message ? err.message : String(err)) });
+        next();
       }
-    }catch(e){
-      results.push({ pass:false, desc: test.desc || 'Test', detail: 'Threw an error: ' + e.message });
     }
-  }
-  return { results };
+    next();
+  })();
+};
+`;
+
+let activeCodingWorker = null;
+let activeCodingWorkerUrl = null;
+
+function terminateActiveCodingWorker(){
+  if(activeCodingWorker){ try{ activeCodingWorker.terminate(); }catch(e){} activeCodingWorker = null; }
+  if(activeCodingWorkerUrl){ try{ URL.revokeObjectURL(activeCodingWorkerUrl); }catch(e){} activeCodingWorkerUrl = null; }
 }
-PAGE_ACTIONS['run-tests'] = async (data, el)=>{
+
+function runCodingTestsInWorker(problem, code, onProgress){
+  return new Promise((resolve)=>{
+    terminateActiveCodingWorker();
+    const blob = new Blob([CODING_WORKER_SOURCE], { type:'application/javascript' });
+    const url = URL.createObjectURL(blob);
+    let worker;
+    try{
+      worker = new Worker(url);
+    }catch(e){
+      URL.revokeObjectURL(url);
+      resolve({ error: 'Could not start the sandboxed worker in this browser: ' + e.message });
+      return;
+    }
+    activeCodingWorker = worker;
+    activeCodingWorkerUrl = url;
+
+    const results = problem.tests.map(t=>({ desc: t.desc||'Test', pass:null, detail:'', state:'pending' }));
+    let settled = false;
+
+    const timer = setTimeout(()=>{
+      if(settled) return;
+      settled = true;
+      terminateActiveCodingWorker();
+      results.forEach(r=>{ if(r.state==='pending'){ r.state='timeout'; r.pass=false; r.detail='Timed out — check for an infinite loop or an unresolved promise.'; } });
+      resolve({ results, timedOut:true });
+    }, CODING_TIMEOUT_MS);
+
+    worker.onmessage = (e)=>{
+      const msg = e.data;
+      if(settled) return;
+      if(msg.type==='result'){
+        results[msg.index] = { desc: msg.desc, pass: msg.pass, detail: msg.detail, state: msg.pass?'passed':'failed' };
+        if(onProgress) onProgress(results.slice());
+      } else if(msg.type==='done'){
+        settled = true;
+        clearTimeout(timer);
+        terminateActiveCodingWorker();
+        resolve({ results, timedOut:false });
+      } else if(msg.type==='setup-error'){
+        settled = true;
+        clearTimeout(timer);
+        terminateActiveCodingWorker();
+        resolve({ error: msg.message });
+      }
+    };
+    worker.onerror = (e)=>{
+      if(settled) return;
+      settled = true;
+      clearTimeout(timer);
+      terminateActiveCodingWorker();
+      resolve({ error: 'Runtime error in the worker: ' + (e.message || 'unknown error') });
+      if(e.preventDefault) e.preventDefault();
+    };
+
+    worker.postMessage({ code, functionName: problem.functionName, tests: problem.tests });
+  });
+}
+
+function renderTestResults(results, extra){
+  const passed = results.filter(r=>r.pass===true).length;
+  const failed = results.filter(r=>r.pass===false && r.state==='failed').length;
+  const timedOut = results.filter(r=>r.state==='timeout').length;
+  const pending = results.filter(r=>r.state==='pending').length;
+  return `
+    <p class="small" style="font-weight:700;">${passed} passed · ${failed} failed${timedOut?` · ${timedOut} timed out`:''}${pending?` · ${pending} pending`:''} (of ${results.length})</p>
+    ${results.map(r=>`<div class="test-result ${r.pass?'test-pass':r.state==='timeout'?'test-fail':r.state==='pending'?'':'test-fail'}">${r.pass?'✓':r.state==='timeout'?'⧖':r.state==='pending'?'…':'✕'} ${escapeHtml(r.desc)}${r.detail?' — '+escapeHtml(r.detail):''}</div>`).join('')}
+    ${extra||''}
+  `;
+}
+
+PAGE_ACTIONS['run-tests'] = async (data)=>{
   const c = findById(CODING_PROBLEMS, data.id);
   const ta = document.getElementById('editor_'+data.id);
   const out = document.getElementById('testResults_'+data.id);
+  const runBtn = document.getElementById('runBtn_'+data.id);
+  const stopBtn = document.getElementById('stopBtn_'+data.id);
   if(!c || !ta || !out) return;
   ensureItem('coding', c.id).code = ta.value;
   saveState();
-  el.disabled = true; el.textContent = 'Running...';
-  out.innerHTML = `<p class="small muted">Running tests locally in your browser...</p>`;
-  const outcome = await runCodingTests(c, ta.value);
-  el.disabled = false; el.textContent = 'Run tests';
+  if(runBtn){ runBtn.disabled = true; runBtn.textContent = 'Running...'; }
+  if(stopBtn) stopBtn.classList.remove('hidden');
+  out.innerHTML = `<p class="small muted">Running tests in an isolated Web Worker...</p>`;
+
+  const outcome = await runCodingTestsInWorker(c, ta.value, (partial)=>{
+    out.innerHTML = renderTestResults(partial);
+  });
+
+  if(runBtn){ runBtn.disabled = false; runBtn.textContent = 'Run tests'; }
+  if(stopBtn) stopBtn.classList.add('hidden');
+
   if(outcome.error){
     out.innerHTML = `<div class="test-result test-fail">${escapeHtml(outcome.error)}</div>`;
     return;
   }
-  const passed = outcome.results.filter(r=>r.pass).length;
-  out.innerHTML = `
-    <p class="small" style="font-weight:700;">${passed}/${outcome.results.length} tests passed</p>
-    ${outcome.results.map(r=>`<div class="test-result ${r.pass?'test-pass':'test-fail'}">${r.pass?'✓':'✕'} ${escapeHtml(r.desc)}${r.detail?' — '+escapeHtml(r.detail):''}</div>`).join('')}
-  `;
-  if(passed===outcome.results.length){
-    toast('All tests passed!');
-  }
+  out.innerHTML = renderTestResults(outcome.results, outcome.timedOut? `<div class="warn-banner mt-8">Execution was stopped after ${CODING_TIMEOUT_MS/1000}s. Check for an infinite loop or a promise that never resolves.</div>` : '');
+  const passedAll = !outcome.timedOut && outcome.results.every(r=>r.pass===true);
+  if(passedAll) toast('All tests passed!');
+};
+
+PAGE_ACTIONS['stop-tests'] = (data)=>{
+  terminateActiveCodingWorker();
+  const out = document.getElementById('testResults_'+data.id);
+  const runBtn = document.getElementById('runBtn_'+data.id);
+  const stopBtn = document.getElementById('stopBtn_'+data.id);
+  if(runBtn){ runBtn.disabled = false; runBtn.textContent = 'Run tests'; }
+  if(stopBtn) stopBtn.classList.add('hidden');
+  if(out) out.innerHTML = `<div class="test-result test-fail">Stopped by user.</div>`;
 };
 
 /* =========================================================================
@@ -16671,33 +16802,65 @@ function shuffle(arr){
   return a;
 }
 
+/* mockSession fields:
+   categoryId, difficulty, duration, pressure, questions, index, answers,
+   endsAt (ISO timestamp the session should end if never paused),
+   pausedRemainingMs (set while paused; null while running),
+   paused, startedAt, finished, summary
+   Remaining time is always derived from endsAt vs Date.now() (or from
+   pausedRemainingMs while paused) — never from a bare tick counter — so a
+   background tab throttling setInterval, or a full page refresh, can't
+   desync the clock. */
 let mockSession = null;
 let mockTimerInterval = null;
 
+function mockRemainingMs(){
+  if(!mockSession) return 0;
+  if(mockSession.paused) return mockSession.pausedRemainingMs;
+  return new Date(mockSession.endsAt).getTime() - Date.now();
+}
+function persistMockSession(){
+  // Immediate (not debounced) write: this is already called from behind its
+  // own debounce for keystrokes (see debouncedMockAnswerSave); chaining a
+  // second debounce on top of that risked losing the last edit to a reload
+  // that happened to land in the gap between the two delays.
+  STATE.activeMock = mockSession && !mockSession.finished ? mockSession : null;
+  saveState(true);
+}
+
 function startMockSession({categoryId, difficulty, duration, pressure}){
   const pool = shuffle(mockPoolFor(categoryId, difficulty));
-  const count = clamp(Math.ceil(duration/3), 5, Math.max(5, pool.length));
-  const questions = pool.slice(0, Math.min(count, pool.length));
+  if(pool.length===0){
+    toast('No questions available for this category and difficulty.');
+    return false;
+  }
+  const count = clamp(Math.ceil(duration/3), Math.min(5, pool.length), pool.length);
+  const questions = pool.slice(0, count);
+  const now = Date.now();
   mockSession = {
     categoryId, difficulty, duration, pressure,
     questions,
     index: 0,
     answers: questions.map(q=>({ qid:q.id, question:q.question, answerText:'', selfScore:null, markedWeak:false, revealed:false })),
-    secondsRemaining: duration*60,
+    endsAt: new Date(now + duration*60000).toISOString(),
+    pausedRemainingMs: null,
     paused:false,
-    startedAt: new Date().toISOString(),
+    finished:false,
+    startedAt: new Date(now).toISOString(),
   };
+  persistMockSession();
   startMockTimer();
   renderMockInto();
+  return true;
 }
 function startMockTimer(){
   clearInterval(mockTimerInterval);
   mockTimerInterval = setInterval(()=>{
     if(!mockSession || mockSession.paused || mockSession.finished) return;
-    mockSession.secondsRemaining--;
+    const remainingMs = mockRemainingMs();
     const el = document.getElementById('mockTimer');
-    if(el) el.textContent = fmtClock(mockSession.secondsRemaining);
-    if(mockSession.secondsRemaining<=0){ finishMockSession(); }
+    if(el) el.textContent = fmtClock(Math.ceil(remainingMs/1000));
+    if(remainingMs<=0){ finishMockSession(); }
   }, 1000);
   cleanupCurrentPage = ()=>{ clearInterval(mockTimerInterval); mockTimerInterval=null; };
 }
@@ -16706,11 +16869,16 @@ function fmtClock(totalSeconds){
   const m = String(Math.floor(s/60)).padStart(2,'0'), sec = String(s%60).padStart(2,'0');
   return `${m}:${sec}`;
 }
-function currentMockAnswer(){ return mockSession.answers[mockSession.index]; }
+function currentMockAnswer(){
+  if(!mockSession) return null;
+  return mockSession.answers[mockSession.index] || null;
+}
 function saveCurrentAnswerText(){
   const ta = document.getElementById('mockAnswerText');
-  if(ta && mockSession) currentMockAnswer().answerText = ta.value;
+  const a = currentMockAnswer();
+  if(ta && a) a.answerText = ta.value;
 }
+const debouncedMockAnswerSave = debounce(()=>{ saveCurrentAnswerText(); persistMockSession(); }, 400);
 function finishMockSession(){
   clearInterval(mockTimerInterval);
   const scored = mockSession.answers.filter(a=>a.selfScore!==null);
@@ -16724,10 +16892,11 @@ function finishMockSession(){
   };
   STATE.mock.sessions.push(summary);
   if(STATE.mock.sessions.length>50) STATE.mock.sessions = STATE.mock.sessions.slice(-50);
-  touchStreak();
-  saveState(true);
   mockSession.finished = true;
   mockSession.summary = summary;
+  STATE.activeMock = null;
+  touchStreak();
+  saveState(true);
   renderMockInto();
 }
 function renderMockInto(){
@@ -16735,25 +16904,42 @@ function renderMockInto(){
   if(el) el.innerHTML = renderMockView();
 }
 
+function updateMockAvailability(){
+  const catEl = document.getElementById('mockCat'), diffEl = document.getElementById('mockDiff');
+  if(!catEl || !diffEl) return;
+  const count = mockPoolFor(catEl.value, diffEl.value).length;
+  const el = document.getElementById('mockAvailability');
+  const btn = document.getElementById('mockStartBtn');
+  if(el){
+    el.innerHTML = count===0
+      ? `<div class="warn-banner" role="alert">No questions are available for this category and difficulty. Try selecting "All difficulties".</div>`
+      : `<p class="small muted">${count} question${count===1?'':'s'} available for this selection.</p>`;
+  }
+  if(btn) btn.disabled = (count===0);
+}
+
 function renderMockSetup(){
   const past = STATE.mock.sessions.slice(-8).reverse();
+  const initialCount = mockPoolFor(MOCK_CATEGORIES[0].id, 'all').length;
+  currentRefresh = updateMockAvailability;
   return `
     <h1 class="page-title">Mock Interview</h1>
     <p class="page-sub">Randomized questions, a real timer, and a self-scored summary at the end. Answer before revealing the model answer.</p>
     <div class="card">
       <div class="field"><label for="mockCat">Category</label>
-        <select id="mockCat">${MOCK_CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('')}</select>
+        <select id="mockCat" data-filter-input>${MOCK_CATEGORIES.map(c=>`<option value="${c.id}">${c.label}</option>`).join('')}</select>
       </div>
       <div class="grid grid-2">
         <div class="field"><label for="mockDiff">Difficulty</label>
-          <select id="mockDiff"><option value="all">All</option><option value="basic">Basic</option><option value="intermediate">Intermediate</option><option value="senior">Senior</option></select>
+          <select id="mockDiff" data-filter-input><option value="all">All</option><option value="basic">Basic</option><option value="intermediate">Intermediate</option><option value="senior">Senior</option></select>
         </div>
         <div class="field"><label for="mockDur">Duration</label>
           <select id="mockDur"><option value="15">15 minutes</option><option value="30" selected>30 minutes</option><option value="45">45 minutes</option><option value="60">60 minutes</option></select>
         </div>
       </div>
-      <label class="item-row" style="cursor:pointer;"><span class="small">Pressure mode — no hints, timer cannot be paused</span><input type="checkbox" id="mockPressure"></label>
-      <button class="btn btn-primary btn-block mt-16" data-action="start-mock">Start mock interview</button>
+      <div id="mockAvailability">${initialCount===0? `<div class="warn-banner" role="alert">No questions are available for this category and difficulty. Try selecting "All difficulties".</div>` : `<p class="small muted">${initialCount} question${initialCount===1?'':'s'} available for this selection.</p>`}</div>
+      <label class="item-row mt-8" style="cursor:pointer;"><span class="small">Pressure mode — no hints, timer cannot be paused</span><input type="checkbox" id="mockPressure"></label>
+      <button class="btn btn-primary btn-block mt-16" id="mockStartBtn" data-action="start-mock" ${initialCount===0?'disabled':''}>Start mock interview</button>
     </div>
 
     ${past.length? `
@@ -16764,14 +16950,33 @@ function renderMockSetup(){
   `;
 }
 
+function renderMockResumePrompt(){
+  const s = STATE.activeMock;
+  const catLabel = (MOCK_CATEGORIES.find(c=>c.id===s.categoryId)||{}).label || s.categoryId;
+  return `
+    <h1 class="page-title">Resume mock interview?</h1>
+    <div class="card">
+      <p class="small">You have an interview session in progress: <strong>${escapeHtml(catLabel)}</strong>, question ${s.index+1} of ${s.questions.length}, ${s.duration} minutes total.</p>
+      <div class="input-row mt-16">
+        <button class="btn btn-primary" data-action="mock-resume">Resume interview</button>
+        <button class="btn btn-danger" data-action="mock-abandon">Abandon interview</button>
+      </div>
+    </div>
+  `;
+}
+
 function renderMockRunning(){
   const s = mockSession, a = currentMockAnswer();
   const q = s.questions[s.index];
+  if(!q || !a){
+    return `<div class="empty-state"><h3 class="card-title">Something went wrong loading this question.</h3>
+      <button class="btn btn-primary mt-8" data-action="mock-finish">End session</button></div>`;
+  }
   return `
     <div class="flex justify-between items-center wrap gap-8">
       <h1 class="page-title" style="margin-bottom:0;">Mock Interview — ${escapeHtml((MOCK_CATEGORIES.find(c=>c.id===s.categoryId)||{}).label||'')}</h1>
       <div class="input-row">
-        <span class="badge badge-accent" id="mockTimer">${fmtClock(s.secondsRemaining)}</span>
+        <span class="badge badge-accent" id="mockTimer" aria-live="off">${fmtClock(Math.ceil(mockRemainingMs()/1000))}</span>
         ${!s.pressure? `<button class="btn btn-ghost btn-sm" data-action="mock-pause">${s.paused?'Resume':'Pause'}</button>` : ''}
         <button class="btn btn-danger btn-sm" data-action="mock-finish">End session</button>
       </div>
@@ -16781,7 +16986,7 @@ function renderMockRunning(){
     <div class="card">
       <h3 class="card-title">${escapeHtml(q.question)}</h3>
       <div class="field mt-12"><label for="mockAnswerText">Your spoken/written answer</label>
-        <textarea id="mockAnswerText" rows="6" placeholder="Answer as if speaking out loud, then jot the key points...">${escapeHtml(a.answerText)}</textarea></div>
+        <textarea id="mockAnswerText" data-mock-answer rows="6" placeholder="Answer as if speaking out loud, then jot the key points...">${escapeHtml(a.answerText)}</textarea></div>
 
       <div class="mt-8"><span class="small faint">Self-score:</span>
         <div class="input-row mt-8">${[1,2,3,4,5].map(n=>`<button class="chip ${a.selfScore===n?'active':''}" data-action="mock-score" data-score="${n}">${n}</button>`).join('')}</div>
@@ -16828,31 +17033,78 @@ function renderMockSummary(){
 }
 
 function renderMockView(){
-  if(!mockSession) return renderMockSetup();
-  if(mockSession.finished) return renderMockSummary();
-  return renderMockRunning();
+  if(mockSession && !mockSession.finished) return renderMockRunning();
+  if(mockSession && mockSession.finished) return renderMockSummary();
+  if(STATE.activeMock) return renderMockResumePrompt();
+  return renderMockSetup();
 }
 ROUTES['mock-interview'] = ()=>{
   if(mockSession && !mockSession.finished) startMockTimer();
   return renderMockView();
 };
 
-PAGE_ACTIONS['start-mock'] = ()=>{
+PAGE_ACTIONS['start-mock'] = (data, el)=>{
+  if(el && el.disabled) return;
   const categoryId = document.getElementById('mockCat').value;
   const difficulty = document.getElementById('mockDiff').value;
   const duration = parseInt(document.getElementById('mockDur').value,10);
   const pressure = document.getElementById('mockPressure').checked;
   startMockSession({categoryId, difficulty, duration, pressure});
 };
-PAGE_ACTIONS['mock-pause'] = ()=>{ mockSession.paused = !mockSession.paused; renderMockInto(); };
+PAGE_ACTIONS['mock-resume'] = ()=>{
+  const snapshot = STATE.activeMock;
+  if(!snapshot){ renderMockInto(); return; }
+  // endsAt is an absolute timestamp, so it's still valid across a refresh —
+  // if it already passed while the tab was closed, the first timer tick
+  // below will immediately finish the session, which is correct behaviour.
+  mockSession = snapshot;
+  startMockTimer();
+  renderMockInto();
+};
+PAGE_ACTIONS['mock-abandon'] = ()=>{
+  STATE.activeMock = null;
+  saveState(true);
+  mockSession = null;
+  renderMockInto();
+};
+PAGE_ACTIONS['mock-pause'] = ()=>{
+  if(mockSession.paused){
+    mockSession.paused = false;
+    mockSession.endsAt = new Date(Date.now() + mockSession.pausedRemainingMs).toISOString();
+    mockSession.pausedRemainingMs = null;
+  } else {
+    mockSession.pausedRemainingMs = Math.max(0, mockRemainingMs());
+    mockSession.paused = true;
+  }
+  persistMockSession();
+  renderMockInto();
+};
 PAGE_ACTIONS['mock-finish'] = ()=>{ saveCurrentAnswerText(); finishMockSession(); };
-PAGE_ACTIONS['mock-score'] = (data)=>{ saveCurrentAnswerText(); currentMockAnswer().selfScore = parseInt(data.score,10); renderMockInto(); };
-PAGE_ACTIONS['mock-mark-weak'] = (data, el)=>{ currentMockAnswer().markedWeak = el.checked; };
-PAGE_ACTIONS['mock-reveal'] = ()=>{ saveCurrentAnswerText(); currentMockAnswer().revealed = true; renderMockInto(); };
+PAGE_ACTIONS['mock-score'] = (data)=>{
+  saveCurrentAnswerText();
+  const a = currentMockAnswer();
+  if(a) a.selfScore = parseInt(data.score,10);
+  persistMockSession();
+  renderMockInto();
+};
+PAGE_ACTIONS['mock-mark-weak'] = (data, el)=>{
+  const a = currentMockAnswer();
+  if(a) a.markedWeak = el.checked;
+  persistMockSession();
+};
+PAGE_ACTIONS['mock-reveal'] = ()=>{
+  saveCurrentAnswerText();
+  const a = currentMockAnswer();
+  if(a) a.revealed = true;
+  persistMockSession();
+  renderMockInto();
+};
 PAGE_ACTIONS['mock-next'] = ()=>{
   saveCurrentAnswerText();
-  if(mockSession.index+1 >= mockSession.questions.length){ finishMockSession(); return; }
+  persistMockSession();
+  if(!mockSession || mockSession.index+1 >= mockSession.questions.length){ finishMockSession(); return; }
   mockSession.index++;
+  persistMockSession();
   renderMockInto();
 };
 PAGE_ACTIONS['mock-restart'] = ()=>{ mockSession = null; renderMockInto(); };
