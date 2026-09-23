@@ -12,17 +12,17 @@
       --surface-2:#EFEFEC;
       --text:#14161A;
       --text-dim:#5B5F66;
-      --text-faint:#8A8E94;
+      --text-faint:#6B6E72;
       --border:#DEDDD8;
       --border-strong:#C7C6C0;
       --accent:#2F6DF0;
       --accent-dim:#E8EFFE;
       --accent-text:#1948B8;
-      --good:#1E8A5F;
+      --good:#1B7D56;
       --good-bg:#E4F5EC;
-      --warn:#B4720A;
+      --warn:#9A6208;
       --warn-bg:#FBF0DC;
-      --bad:#C23A3A;
+      --bad:#C03939;
       --bad-bg:#FBE7E7;
       --senior-bg:#F0E7FB;
       --senior-text:#5B2E9E;
@@ -42,7 +42,7 @@
       --surface-2:#24272D;
       --text:#EDEDEC;
       --text-dim:#A7ABB2;
-      --text-faint:#75797F;
+      --text-faint:#7C8086;
       --border:#33363C;
       --border-strong:#43464D;
       --accent:#5B8DF6;
@@ -62,7 +62,7 @@
     @media (prefers-color-scheme: dark){
       :root:not([data-theme="light"]){
         --bg:#15171B; --surface:#1D2025; --surface-2:#24272D; --text:#EDEDEC;
-        --text-dim:#A7ABB2; --text-faint:#75797F; --border:#33363C; --border-strong:#43464D;
+        --text-dim:#A7ABB2; --text-faint:#7C8086; --border:#33363C; --border-strong:#43464D;
         --accent:#5B8DF6; --accent-dim:#1E2A44; --accent-text:#8FB3FA;
         --good:#3FC088; --good-bg:#123324; --warn:#E0A23D; --warn-bg:#3A2C10;
         --bad:#E36767; --bad-bg:#3A1818; --senior-bg:#2A1F3D; --senior-text:#C9A6F5;
@@ -86,6 +86,18 @@
 
     :focus-visible{outline:2px solid var(--accent);outline-offset:2px;}
     :focus:not(:focus-visible){outline:none;}
+
+    .skip-link{
+      position:absolute;left:8px;top:-48px;z-index:200;
+      background:var(--accent);color:#fff;padding:10px 16px;border-radius:var(--radius-sm);
+      font-size:13px;font-weight:700;text-decoration:none;transition:top .15s ease;
+    }
+    .skip-link:focus{top:8px;}
+    body.scroll-locked{overflow:hidden;}
+    .visually-hidden-label{
+      position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;
+      clip:rect(0,0,0,0);white-space:nowrap;border:0;
+    }
 
     @media (prefers-reduced-motion: reduce){
       *,*::before,*::after{animation-duration:0.001ms !important;animation-iteration-count:1 !important;transition-duration:0.001ms !important;scroll-behavior:auto !important;}
@@ -337,8 +349,14 @@
     @media print{
       .sidebar,.topbar,.no-print{display:none !important;}
       .main-wrap{margin-left:0;}
-      body{background:#fff;color:#000;}
-      .card{border:1px solid #999;break-inside:avoid;}
+      body{background:#fff;color:#000;font-size:12pt;line-height:1.4;}
+      .content{max-width:none;padding:0;}
+      .card{border:1px solid #999;break-inside:avoid;box-shadow:none;background:#fff;margin-bottom:10pt;}
+      h1.page-title{font-size:20pt;}
+      h2.section-title{font-size:14pt;break-after:avoid;margin-top:18pt;}
+      h3.card-title{break-after:avoid;}
+      a{color:#000;text-decoration:none;}
+      .badge{border:1px solid #999;color:#000 !important;background:#fff !important;}
     }
 </style>
 </head>
@@ -14949,6 +14967,13 @@ const STATUS_LABEL = {
   confident:'Confident', mastered:'Mastered'
 };
 const STATUS_ORDER = ['not_started','learning','needs_revision','confident','mastered'];
+// Fine-grained coding-problem progress, tracked separately from STATUS_ORDER
+// (opening/reading an answer is never treated as mastery — see 35_coding.js).
+const CODING_PROGRESS_VALUES = ['not_viewed','viewed','attempted','tests_partial','solved_no_help','solved_with_hints','revealed'];
+const CODING_PROGRESS_LABEL = {
+  not_viewed:'Not viewed', viewed:'Viewed', attempted:'Attempted', tests_partial:'Partially passing',
+  solved_no_help:'Solved without help', solved_with_hints:'Solved with hints', revealed:'Solution revealed'
+};
 
 /* ---------------------- default state ---------------------- */
 function defaultState(){
@@ -14959,6 +14984,8 @@ function defaultState(){
     plan30: {},        // day(1-30) -> { tasks:{taskKey:boolean}, notes:'', rating:null }
     mock: { sessions: [] },
     activeMock: null,  // an in-progress mock session snapshot, so a refresh doesn't lose it (see 41_mock.js)
+    dailyFlags: { date:null, explainedAloud:false, projectSpoken:false }, // today's Daily Output flags that aren't otherwise derivable from item state (see 30_bridge.js)
+    recentSearches: [], // command palette history (see 47_search.js)
     notes: {}          // freeform notes keyed by scope, used for generic textareas not tied to items collection (kept for future use)
   };
 }
@@ -15055,34 +15082,59 @@ function readFileAsText(file){
 function clamp(n,min,max){ return Math.max(min,Math.min(max,n)); }
 function pct(n,total){ return total>0 ? Math.round((n/total)*100) : 0; }
 
-/* ---------------------- item state (topics/questions/coding/etc.) ---------------------- */
+/* ---------------------- item state (topics/questions/coding/etc.) ----------------------
+   Revision scheduling ("spaced repetition"): each status transition is treated
+   as a review outcome, whether it came from the quick status buttons (a
+   direct manual mark) or the Revision Queue's explicit Forgot/Difficult/
+   Good/Easy prompt — both call setItemStatus with the resulting status, so
+   there is exactly one place that computes intervals. Named intervals:
+     learning            -> 1 day
+     needs_revision      -> 1 day
+     confident (1st time) -> 3 days
+     confident (again)    -> 7 days
+     mastered (1st time)  -> 14 days
+     mastered (repeatedly) -> 30 days
+   masteryStreak counts consecutive confident/mastered outcomes and resets to
+   0 on any learning/needs_revision outcome ("forgot" or "difficult"). */
 function itemKey(collection,id){ return collection+':'+id; }
+function defaultItemState(){
+  return { status:'not_started', confidence:0, notes:'', nextReview:null, lastReviewed:null,
+    masteryStreak:0, reviewCount:0, successCount:0, previousStatus:null, updatedAt:null, history:[] };
+}
 function getItem(collection,id){
   const k = itemKey(collection,id);
-  return STATE.items[k] || { status:'not_started', confidence:0, notes:'', nextReview:null, stage:0, updatedAt:null, history:[] };
+  return STATE.items[k] || defaultItemState();
 }
 function ensureItem(collection,id){
   const k = itemKey(collection,id);
-  if(!STATE.items[k]) STATE.items[k] = { status:'not_started', confidence:0, notes:'', nextReview:null, stage:0, updatedAt:null, history:[] };
+  if(!STATE.items[k]) STATE.items[k] = defaultItemState();
   return STATE.items[k];
 }
-function scheduleNextReview(status, stage){
+function scheduleNextReview(status, masteryStreak, previousStatus){
   const today = todayISO();
-  if(status==='learning') return { next: addDaysISO(today,1), stage:0 };
-  if(status==='needs_revision') return { next: addDaysISO(today,1), stage:0 };
+  if(status==='learning') return { next: addDaysISO(today,1), masteryStreak:0 };
+  if(status==='needs_revision') return { next: addDaysISO(today,1), masteryStreak:0 };
   if(status==='confident'){
-    if(stage<1) return { next: addDaysISO(today,3), stage:1 };
-    return { next: addDaysISO(today,7), stage:2 };
+    const streak = (masteryStreak||0)+1;
+    return { next: addDaysISO(today, streak<=1?3:7), masteryStreak:streak };
   }
-  if(status==='mastered') return { next: addDaysISO(today,14), stage:3 };
-  return { next:null, stage:0 };
+  if(status==='mastered'){
+    const streak = (masteryStreak||0)+1;
+    return { next: addDaysISO(today, previousStatus==='mastered'?30:14), masteryStreak:streak };
+  }
+  return { next:null, masteryStreak:0 };
 }
 function setItemStatus(collection,id,status){
   const it = ensureItem(collection,id);
-  const sched = scheduleNextReview(status, it.stage||0);
+  const sched = scheduleNextReview(status, it.masteryStreak, it.status);
+  const previousStatus = it.status;
+  it.previousStatus = previousStatus;
   it.status = status;
   it.nextReview = sched.next;
-  it.stage = sched.stage;
+  it.masteryStreak = sched.masteryStreak;
+  it.lastReviewed = todayISO();
+  it.reviewCount = (it.reviewCount||0) + 1;
+  if(status==='confident' || status==='mastered') it.successCount = (it.successCount||0) + 1;
   it.updatedAt = todayISO();
   it.history = it.history||[];
   it.history.push({status, date: todayISO()});
@@ -15132,6 +15184,24 @@ function setPlanNote(day, text){
   saveState();
 }
 
+/* ---------------------- daily output flags ----------------------
+   A couple of Daily Output signals (see 30_bridge.js: todaysDailyOutput)
+   aren't derivable from any other stored item, so they get a tiny explicit
+   per-day tracker instead of a whole new collection. */
+function getDailyFlags(){
+  const today = todayISO();
+  if(STATE.dailyFlags && STATE.dailyFlags.date===today) return STATE.dailyFlags;
+  return { date:today, explainedAloud:false, projectSpoken:false };
+}
+function markDailyFlag(flag){
+  const today = todayISO();
+  if(!STATE.dailyFlags || STATE.dailyFlags.date!==today){
+    STATE.dailyFlags = { date:today, explainedAloud:false, projectSpoken:false };
+  }
+  STATE.dailyFlags[flag] = true;
+  saveState();
+}
+
 /* ---------------------- collections summary helpers ---------------------- */
 function collectionStats(collection, allIds){
   let done=0, weak=0, dueToday=0, overdue=0;
@@ -15149,13 +15219,15 @@ function collectionStats(collection, allIds){
   return { total: allIds.length, done, weak, dueToday, overdue };
 }
 
-/* ---------------------- toast ---------------------- */
+/* ---------------------- toast (doubles as an accessible live region) ---------------------- */
 function toast(msg){
   let stack = document.getElementById('toastStack');
   if(!stack){
     stack = document.createElement('div');
     stack.id = 'toastStack';
     stack.className = 'toast-stack';
+    stack.setAttribute('role','status');
+    stack.setAttribute('aria-live','polite');
     document.body.appendChild(stack);
   }
   const t = document.createElement('div');
@@ -15165,38 +15237,70 @@ function toast(msg){
   setTimeout(()=>{ t.style.transition='opacity .25s'; t.style.opacity='0'; setTimeout(()=>t.remove(),260); }, 2400);
 }
 
-/* ---------------------- modal ---------------------- */
-let modalCloseHandler = null;
-function openModal({title, bodyHtml, footHtml, onOpen}){
+/* ---------------------- modal ----------------------
+   Accessible dialog: traps Tab/Shift+Tab inside itself, closes on Escape,
+   restores focus to whatever opened it, locks background scroll, and labels
+   itself via aria-labelledby pointing at its own real heading id. */
+let modalKeydownHandler = null;
+let modalPreviousFocus = null;
+function getFocusableIn(container){
+  return Array.from(container.querySelectorAll(
+    'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+  )).filter(el=>el.offsetParent!==null || el===document.activeElement);
+}
+function openModal({title, bodyHtml, footHtml, onOpen, destructive}){
   closeModal();
+  modalPreviousFocus = document.activeElement;
+  const headingId = 'modalHeading_' + Math.random().toString(36).slice(2,8);
   const overlay = document.createElement('div');
   overlay.className = 'modal-overlay';
   overlay.id = 'activeModal';
   overlay.innerHTML = `
-    <div class="modal-box" role="dialog" aria-modal="true" aria-label="${escapeHtml(title||'Dialog')}">
-      <div class="modal-head"><h3 class="card-title">${escapeHtml(title||'')}</h3>
-        <button class="btn btn-ghost btn-icon" data-action="close-modal" aria-label="Close">✕</button>
+    <div class="modal-box" role="${destructive?'alertdialog':'dialog'}" aria-modal="true" aria-labelledby="${headingId}">
+      <div class="modal-head"><h3 class="card-title" id="${headingId}">${escapeHtml(title||'')}</h3>
+        <button class="btn btn-ghost btn-icon" data-action="close-modal" aria-label="Close dialog">✕</button>
       </div>
       <div class="modal-body">${bodyHtml||''}</div>
       ${footHtml? `<div class="modal-foot">${footHtml}</div>` : ''}
     </div>`;
   document.body.appendChild(overlay);
+  document.body.classList.add('scroll-locked');
   overlay.addEventListener('mousedown', (e)=>{ if(e.target===overlay) closeModal(); });
-  modalCloseHandler = (e)=>{ if(e.key==='Escape') closeModal(); };
-  document.addEventListener('keydown', modalCloseHandler);
+  modalKeydownHandler = (e)=>{
+    if(e.key==='Escape'){ e.preventDefault(); closeModal(); return; }
+    if(e.key==='Tab'){
+      const focusables = getFocusableIn(overlay);
+      if(focusables.length===0) return;
+      const first = focusables[0], last = focusables[focusables.length-1];
+      if(e.shiftKey && document.activeElement===first){ e.preventDefault(); last.focus(); }
+      else if(!e.shiftKey && document.activeElement===last){ e.preventDefault(); first.focus(); }
+    }
+  };
+  document.addEventListener('keydown', modalKeydownHandler);
   if(onOpen) onOpen(overlay);
-  const focusable = overlay.querySelector('button, textarea, input, select, a');
-  if(focusable) focusable.focus();
+  // Only apply the default "focus the first focusable element" behaviour if
+  // onOpen didn't already move focus somewhere specific inside the modal
+  // (e.g. the command palette focusing its search input, not the close button).
+  if(!overlay.contains(document.activeElement)){
+    const focusable = getFocusableIn(overlay)[0];
+    if(focusable) focusable.focus();
+  }
 }
 function closeModal(){
   const m = document.getElementById('activeModal');
   if(m) m.remove();
-  if(modalCloseHandler){ document.removeEventListener('keydown', modalCloseHandler); modalCloseHandler=null; }
+  document.body.classList.remove('scroll-locked');
+  if(modalKeydownHandler){ document.removeEventListener('keydown', modalKeydownHandler); modalKeydownHandler=null; }
   if(typeof explainTimer!=='undefined' && explainTimer){ clearInterval(explainTimer); explainTimer=null; }
+  if(modalPreviousFocus && typeof modalPreviousFocus.focus==='function' && document.contains(modalPreviousFocus)){
+    modalPreviousFocus.focus();
+  }
+  modalPreviousFocus = null;
 }
 function confirmModal(title, message, confirmLabel, onConfirm){
   openModal({
     title,
+    destructive: true,
     bodyHtml: `<p>${escapeHtml(message)}</p>`,
     footHtml: `<button class="btn btn-ghost" data-action="close-modal">Cancel</button>
                <button class="btn btn-danger" id="confirmModalBtn">${escapeHtml(confirmLabel||'Confirm')}</button>`,
@@ -15278,6 +15382,18 @@ function router(){
   document.getElementById('pageContent').scrollTop = 0;
   window.scrollTo(0,0);
   closeDrawer();
+  enhanceInteractiveCards(root);
+}
+// Non-native clickable elements (div/li cards using data-nav for navigation)
+// get keyboard semantics added once, here, instead of in every page template.
+function enhanceInteractiveCards(root){
+  if(!root) return;
+  root.querySelectorAll('[data-nav], [data-nav-item]').forEach(el=>{
+    const tag = el.tagName;
+    if(tag==='A' || tag==='BUTTON') return;
+    if(!el.hasAttribute('tabindex')) el.setAttribute('tabindex','0');
+    if(!el.hasAttribute('role')) el.setAttribute('role','link');
+  });
 }
 
 /* ---------------------- nav model + shell ---------------------- */
@@ -15309,6 +15425,7 @@ const NAV_GROUPS = [
 ];
 const NAV_TITLES = {};
 NAV_GROUPS.forEach(g=>g.items.forEach(i=>NAV_TITLES[i.id]=i.label));
+NAV_TITLES['print-report'] = 'Printable Revision Report';
 
 function renderSidebarNav(){
   return NAV_GROUPS.map(g=>`
@@ -15323,13 +15440,30 @@ function renderSidebar(){
   const nav = document.getElementById('sidebarNav');
   if(nav) nav.innerHTML = renderSidebarNav();
 }
+let drawerKeydownHandler = null;
 function toggleDrawer(){
-  document.getElementById('sidebarEl').classList.toggle('open');
-  document.getElementById('drawerOverlay').classList.toggle('open');
+  const isOpen = !document.getElementById('sidebarEl').classList.contains('open');
+  document.getElementById('sidebarEl').classList.toggle('open', isOpen);
+  document.getElementById('drawerOverlay').classList.toggle('open', isOpen);
+  document.body.classList.toggle('scroll-locked', isOpen);
+  const btn = document.querySelector('[data-action="toggle-drawer"]');
+  if(btn) btn.setAttribute('aria-expanded', String(isOpen));
+  if(isOpen){
+    drawerKeydownHandler = (e)=>{ if(e.key==='Escape'){ e.preventDefault(); closeDrawer(true); } };
+    document.addEventListener('keydown', drawerKeydownHandler);
+  } else if(drawerKeydownHandler){
+    document.removeEventListener('keydown', drawerKeydownHandler); drawerKeydownHandler=null;
+  }
 }
-function closeDrawer(){
+function closeDrawer(returnFocus){
+  const wasOpen = document.getElementById('sidebarEl').classList.contains('open');
   document.getElementById('sidebarEl').classList.remove('open');
   document.getElementById('drawerOverlay').classList.remove('open');
+  document.body.classList.remove('scroll-locked');
+  const btn = document.querySelector('[data-action="toggle-drawer"]');
+  if(btn) btn.setAttribute('aria-expanded', 'false');
+  if(drawerKeydownHandler){ document.removeEventListener('keydown', drawerKeydownHandler); drawerKeydownHandler=null; }
+  if(returnFocus && wasOpen && btn) btn.focus();
 }
 function toggleTheme(){
   const root = document.documentElement;
@@ -15342,7 +15476,8 @@ function toggleTheme(){
 function renderShell(){
   const app = document.getElementById('appRoot');
   app.innerHTML = `
-    <div class="drawer-overlay" id="drawerOverlay"></div>
+    <a href="#pageContent" class="skip-link">Skip to content</a>
+    <div class="drawer-overlay" id="drawerOverlay" aria-hidden="true"></div>
     <aside class="sidebar" id="sidebarEl">
       <div class="sidebar-brand">
         <div class="name">Frontend Interview Command Center</div>
@@ -15356,17 +15491,18 @@ function renderShell(){
     <div class="main-wrap">
       <header class="topbar">
         <div class="flex items-center gap-8">
-          <button class="btn btn-ghost btn-icon menu-btn" data-action="toggle-drawer" aria-label="Open navigation">☰</button>
+          <button class="btn btn-ghost btn-icon menu-btn" data-action="toggle-drawer" aria-label="Toggle navigation menu" aria-expanded="false" aria-controls="sidebarEl">☰</button>
           <span class="topbar-title" id="topbarTitle">Dashboard</span>
         </div>
         <div class="topbar-actions">
           <span class="small muted" id="topbarStreak"></span>
+          <button class="btn btn-ghost btn-icon" data-action="open-search" aria-label="Search everything (Ctrl+K)" title="Search (Ctrl+K)">⌕</button>
           <button class="btn btn-primary btn-sm" data-nav="mock-interview">Mock interview</button>
         </div>
       </header>
-      <main class="content" id="pageContent"></main>
+      <main class="content" id="pageContent" tabindex="-1"></main>
     </div>
-    <input type="file" id="importFileInput" accept="application/json" class="hidden" aria-hidden="true">
+    <input type="file" id="importFileInput" accept="application/json" class="hidden" aria-label="Import backup JSON file">
   `;
   updateTopbarStreak();
 }
@@ -15419,7 +15555,30 @@ function initGlobalEvents(){
     }
   });
 
+  // Enter/Space activation for non-native clickable elements (see enhanceInteractiveCards).
+  document.addEventListener('keydown', (e)=>{
+    if(e.key!=='Enter' && e.key!==' ') return;
+    const el = e.target.closest('[role="link"][data-nav], [role="link"][data-nav-item]');
+    if(!el) return;
+    e.preventDefault();
+    if(el.dataset.nav) navigate(el.dataset.nav);
+    else if(el.dataset.navItem){ const [collection,id] = el.dataset.navItem.split(':'); navigateToItem(collection,id); }
+  });
+
   window.addEventListener('hashchange', router);
+
+  // <details> "toggle" doesn't bubble in all browsers, so this listener is
+  // registered with capture:true. Used to note that a coding problem's hints
+  // were opened, so "solved without help" vs "solved with hints" stays honest.
+  document.addEventListener('toggle', (e)=>{
+    const el = e.target;
+    if(el && el.matches && el.matches('[data-hints-for]') && el.open){
+      const id = el.getAttribute('data-hints-for');
+      const it = ensureItem('coding', id);
+      it.hintsViewed = true;
+      saveState();
+    }
+  }, true);
 }
 const debouncedNoteSave = debounce((collection,id,val)=>setItemNote(collection,id,val), 350);
 const debouncedPlanNoteSave = debounce((day,val)=>setPlanNote(day,val), 350);
@@ -15476,29 +15635,180 @@ function navigateToItem(collection, id){
   navigate('dashboard');
 }
 
-/* ---------------------- export / import ---------------------- */
+/* ---------------------- export / import ----------------------
+   Versioned, validated backup format:
+     { app, schemaVersion, exportedAt, state }
+   Import never touches the live STATE until the file has been fully parsed,
+   validated field-by-field and sanitized into a clean state object, AND the
+   user has explicitly confirmed replacing their current progress. Anything
+   with an unrecognized shape is dropped (with a count shown), not silently
+   trusted; anything fatally wrong (not JSON, wrong app, unreadable schema
+   version, too large) is rejected with a plain-English message — never a
+   raw stack trace. */
+const BACKUP_SCHEMA_VERSION = 2;
+const MAX_IMPORT_BYTES = 8 * 1024 * 1024; // 8MB — generous for this app's data, small enough to reject garbage
+
 function exportAllData(){
-  const payload = { exportedAt: new Date().toISOString(), app:'Frontend Interview Command Center', state: STATE };
-  download(`ficc-backup-${todayISO()}.json`, JSON.stringify(payload,null,2), 'application/json');
+  const payload = {
+    app: 'Frontend Interview Command Center',
+    schemaVersion: BACKUP_SCHEMA_VERSION,
+    exportedAt: new Date().toISOString(),
+    state: STATE,
+  };
+  download(`ficc-backup-${todayISO()}.json`, JSON.stringify(payload, null, 2), 'application/json');
   toast('Backup downloaded.');
 }
+
+function isValidDateStr(s){ return s===null || s===undefined || (typeof s==='string' && /^\d{4}-\d{2}-\d{2}$/.test(s)); }
+function isValidStatus(s){ return STATUS_ORDER.indexOf(s)!==-1; }
+function isValidConfidence(n){ return typeof n==='number' && isFinite(n) && n>=0 && n<=5; }
+
+function sanitizeItemEntry(raw){
+  if(!raw || typeof raw!=='object') return null;
+  const d = defaultItemState();
+  if(isValidStatus(raw.status)) d.status = raw.status;
+  if(isValidConfidence(raw.confidence)) d.confidence = raw.confidence;
+  if(typeof raw.notes==='string') d.notes = raw.notes.slice(0,20000);
+  if(isValidDateStr(raw.nextReview)) d.nextReview = raw.nextReview || null;
+  if(isValidDateStr(raw.lastReviewed)) d.lastReviewed = raw.lastReviewed || null;
+  if(typeof raw.masteryStreak==='number') d.masteryStreak = Math.max(0, Math.floor(raw.masteryStreak));
+  else if(typeof raw.stage==='number') d.masteryStreak = Math.max(0, Math.floor(raw.stage)); // legacy v1 field name
+  if(typeof raw.reviewCount==='number') d.reviewCount = Math.max(0, Math.floor(raw.reviewCount));
+  if(typeof raw.successCount==='number') d.successCount = Math.max(0, Math.floor(raw.successCount));
+  if(raw.previousStatus===null || isValidStatus(raw.previousStatus)) d.previousStatus = raw.previousStatus || null;
+  if(isValidDateStr(raw.updatedAt)) d.updatedAt = raw.updatedAt || null;
+  if(Array.isArray(raw.history)){
+    d.history = raw.history.filter(h=>h && typeof h==='object' && isValidStatus(h.status) && isValidDateStr(h.date)).slice(-30);
+  }
+  if(CODING_PROGRESS_VALUES.indexOf(raw.codingProgress)!==-1) d.codingProgress = raw.codingProgress;
+  if(typeof raw.hintsViewed==='boolean') d.hintsViewed = raw.hintsViewed;
+  if(typeof raw.code==='string') d.code = raw.code.slice(0,50000);
+  return d;
+}
+function sanitizeMockSession(raw){
+  if(!raw || typeof raw!=='object') return null;
+  if(!isValidDateStr(raw.date) || !raw.date) return null;
+  if(typeof raw.categoryId!=='string') return null;
+  if(['all','basic','intermediate','senior'].indexOf(raw.difficulty)===-1) return null;
+  if(typeof raw.duration!=='number' || typeof raw.questionCount!=='number' || typeof raw.avgScore!=='number') return null;
+  if(!Array.isArray(raw.weakTopics) || !Array.isArray(raw.answers)) return null;
+  return {
+    date: raw.date, categoryId: raw.categoryId, difficulty: raw.difficulty,
+    duration: raw.duration, questionCount: raw.questionCount, avgScore: raw.avgScore,
+    weakTopics: raw.weakTopics.filter(t=>typeof t==='string'),
+    answers: raw.answers.filter(a=>a && typeof a==='object').map(a=>({
+      qid: String(a.qid||''), question: String(a.question||''),
+      answerText: typeof a.answerText==='string' ? a.answerText.slice(0,20000) : '',
+      selfScore: (typeof a.selfScore==='number' && a.selfScore>=1 && a.selfScore<=5) ? a.selfScore : null,
+      markedWeak: !!a.markedWeak, revealed: !!a.revealed,
+    })),
+  };
+}
+function validateAndSanitizeBackup(parsed){
+  if(!parsed || typeof parsed!=='object') return { ok:false, error:'This file is not a recognizable backup — it should be a JSON object exported from this app.' };
+  const incoming = (parsed.state && typeof parsed.state==='object') ? parsed.state : parsed;
+  if(!incoming || typeof incoming!=='object') return { ok:false, error:'This file has no recognizable app data inside it.' };
+  if(parsed.app && parsed.app!=='Frontend Interview Command Center') return { ok:false, error:'This file is a backup from a different application.' };
+  const recognizedKeys = ['items','plan30','mock','meta','activeMock','notes','dailyFlags'];
+  const looksLikeOurState = recognizedKeys.some(k=> Object.prototype.hasOwnProperty.call(incoming,k));
+  if(parsed.app!=='Frontend Interview Command Center' && !looksLikeOurState){
+    return { ok:false, error:'This file doesn\'t look like a Frontend Interview Command Center backup — it has none of the expected fields (items, plan30, mock, meta).' };
+  }
+  const schemaVersion = parsed.schemaVersion || 1;
+  if(schemaVersion > BACKUP_SCHEMA_VERSION) return { ok:false, error:`This backup was made with a newer app version (schema v${schemaVersion}) than this one supports (v${BACKUP_SCHEMA_VERSION}). Update the app before importing it.` };
+
+  const warnings = [];
+  const sanitized = defaultState();
+
+  if(incoming.meta && typeof incoming.meta==='object'){
+    if(typeof incoming.meta.streak==='number') sanitized.meta.streak = Math.max(0, Math.floor(incoming.meta.streak));
+    if(isValidDateStr(incoming.meta.lastActiveDate)) sanitized.meta.lastActiveDate = incoming.meta.lastActiveDate || null;
+    if(incoming.meta.startDate && isValidDateStr(incoming.meta.startDate)) sanitized.meta.startDate = incoming.meta.startDate;
+  }
+
+  let itemsKept=0, itemsDropped=0;
+  if(incoming.items && typeof incoming.items==='object'){
+    Object.keys(incoming.items).forEach(key=>{
+      if(typeof key!=='string' || key.indexOf(':')===-1){ itemsDropped++; return; }
+      const clean = sanitizeItemEntry(incoming.items[key]);
+      if(clean){ sanitized.items[key]=clean; itemsKept++; } else itemsDropped++;
+    });
+  }
+  if(itemsDropped>0) warnings.push(`${itemsDropped} progress entr${itemsDropped===1?'y':'ies'} had an unrecognized shape and were skipped (${itemsKept} kept).`);
+
+  let planDropped=0, planKept=0;
+  if(incoming.plan30 && typeof incoming.plan30==='object'){
+    Object.keys(incoming.plan30).forEach(day=>{
+      const raw = incoming.plan30[day];
+      const dayNum = parseInt(day,10);
+      if(!(dayNum>=1 && dayNum<=30) || !raw || typeof raw!=='object'){ planDropped++; return; }
+      sanitized.plan30[day] = {
+        tasks: (raw.tasks && typeof raw.tasks==='object') ? raw.tasks : {},
+        notes: typeof raw.notes==='string' ? raw.notes.slice(0,20000) : '',
+        rating: (raw.rating===null || isValidStatus(raw.rating)) ? raw.rating : null,
+      };
+      planKept++;
+    });
+  }
+  if(planDropped>0) warnings.push(`${planDropped} plan-day entr${planDropped===1?'y':'ies'} were skipped.`);
+
+  let mockKept=0, mockDropped=0;
+  if(incoming.mock && Array.isArray(incoming.mock.sessions)){
+    incoming.mock.sessions.forEach(s=>{
+      const clean = sanitizeMockSession(s);
+      if(clean){ sanitized.mock.sessions.push(clean); mockKept++; } else mockDropped++;
+    });
+    sanitized.mock.sessions = sanitized.mock.sessions.slice(-50);
+  }
+  if(mockDropped>0) warnings.push(`${mockDropped} mock-interview session(s) were skipped.`);
+
+  if(incoming.activeMock && typeof incoming.activeMock==='object' && Array.isArray(incoming.activeMock.questions)){
+    sanitized.activeMock = incoming.activeMock;
+  }
+  if(incoming.notes && typeof incoming.notes==='object') sanitized.notes = incoming.notes;
+
+  return { ok:true, state: sanitized, warnings, counts:{ items:itemsKept, plan:planKept, mock:mockKept } };
+}
+
 function importDataFile(file){
+  if(file.size > MAX_IMPORT_BYTES){
+    openModal({ title:'Import failed', bodyHtml:`<p class="small">That file is ${(file.size/1024/1024).toFixed(1)}MB — larger than the ${MAX_IMPORT_BYTES/1024/1024}MB this app accepts for a backup. Make sure it's the right file.</p>`,
+      footHtml:`<button class="btn btn-primary" data-action="close-modal">OK</button>` });
+    return;
+  }
   readFileAsText(file).then(text=>{
-    try{
-      const parsed = JSON.parse(text);
-      const incoming = parsed.state || parsed;
-      if(!incoming || typeof incoming!=='object') throw new Error('bad shape');
-      STATE = Object.assign(defaultState(), incoming, {
-        meta: Object.assign(defaultState().meta, incoming.meta||{}),
-        items: incoming.items||{}, plan30: incoming.plan30||{},
-        mock: Object.assign({sessions:[]}, incoming.mock||{}), notes: incoming.notes||{}
-      });
-      saveState(true);
-      toast('Backup imported.');
-      router();
-    }catch(err){
-      toast('Import failed — file is not a valid backup.');
+    let parsed;
+    try{ parsed = JSON.parse(text); }
+    catch(e){
+      openModal({ title:'Import failed', bodyHtml:`<p class="small">This file isn't valid JSON, so it can't be read as a backup. (${escapeHtml(e.message)})</p>`,
+        footHtml:`<button class="btn btn-primary" data-action="close-modal">OK</button>` });
+      return;
     }
+    const result = validateAndSanitizeBackup(parsed);
+    if(!result.ok){
+      openModal({ title:'Import failed', bodyHtml:`<p class="small">${escapeHtml(result.error)}</p>`,
+        footHtml:`<button class="btn btn-primary" data-action="close-modal">OK</button>` });
+      return;
+    }
+    openModal({
+      title:'Replace your current progress?',
+      destructive: true,
+      bodyHtml:`
+        <p class="small">This backup contains <strong>${result.counts.items}</strong> progress entries, <strong>${result.counts.plan}</strong> plan-day entries and <strong>${result.counts.mock}</strong> mock-interview sessions.</p>
+        ${result.warnings.length? `<div class="warn-banner mt-8">${result.warnings.map(w=>escapeHtml(w)).join('<br>')}</div>` : ''}
+        <p class="small mt-8">Importing will <strong>replace everything</strong> currently stored in this browser — your existing progress, notes and mock history will be gone unless you've exported a backup of it.</p>`,
+      footHtml:`<button class="btn btn-ghost" data-action="close-modal">Cancel</button>
+                <button class="btn btn-danger" id="confirmImportBtn">Replace and import</button>`,
+      onOpen:(overlay)=>{
+        overlay.querySelector('#confirmImportBtn').addEventListener('click', ()=>{
+          STATE = result.state;
+          saveState(true);
+          closeModal();
+          toast('Backup imported.');
+          router();
+        });
+      }
+    });
   });
 }
 
@@ -15645,6 +15955,86 @@ function weakTopicsList(){
   return TOPICS.filter(t=> getItem('topic',t.id).status==='needs_revision');
 }
 
+/* ---------------------- Daily Output ----------------------
+   Prevents "passive learning" — none of these can be satisfied just by
+   opening/reading an answer. Coding needs an actual test run recorded
+   today; explaining/speaking needs the explain-aloud flow to have been
+   started; revision needs an actual Forgot/Difficult/Good/Easy outcome. */
+function todaysDailyOutput(){
+  const today = todayISO();
+  const flags = getDailyFlags();
+  const codingTouchedToday = CODING_PROBLEMS.filter(c=>{
+    const it = getItem('coding', c.id);
+    const progressed = ['attempted','tests_partial','solved_no_help','solved_with_hints'].indexOf(it.codingProgress||'not_viewed') !== -1;
+    return it.updatedAt===today && progressed;
+  }).length;
+  const reactTaskDone = LABS.some(l=> getItem('lab', l.id).updatedAt===today);
+  const mockDone = STATE.mock.sessions.some(s=>s.date===today);
+  const weakRevisedToday = Object.keys(STATE.items).some(k=> STATE.items[k].lastReviewed===today);
+  return [
+    { key:'explain', label:'Explain one concept aloud', done: !!flags.explainedAloud, detail:'' },
+    { key:'coding', label:'Attempt 2 coding problems before viewing solutions', done: codingTouchedToday>=2, detail:`${codingTouchedToday}/2` },
+    { key:'react', label:'One React/Next.js practical task (a lab)', done: reactTaskDone, detail:'' },
+    { key:'project', label:'Speak one project answer aloud', done: !!flags.projectSpoken, detail:'' },
+    { key:'mock', label:'Complete one mock-interview session', done: mockDone, detail:'' },
+    { key:'revise', label:'Revise one item due for revision', done: weakRevisedToday, detail:'' },
+  ];
+}
+
+/* ---------------------- Interview readiness score ----------------------
+   An internal estimate only — never a guarantee of interview success, and
+   never inflated just because an answer or solution was opened. Coding
+   credit specifically requires codingProgress to be attempted-or-better
+   (a real test run), not merely "viewed". */
+function computeReadinessScore(){
+  const topicStats = collectionStats('topic', allIdsFor('topic'));
+  const topicScore = topicStats.total ? topicStats.done/topicStats.total : 0;
+
+  let codingAttemptedOrBetter=0, codingSolved=0;
+  CODING_PROBLEMS.forEach(c=>{
+    const p = getItem('coding', c.id).codingProgress || 'not_viewed';
+    if(['attempted','tests_partial','solved_no_help','solved_with_hints'].indexOf(p)!==-1) codingAttemptedOrBetter++;
+    if(p==='solved_no_help' || p==='solved_with_hints') codingSolved++;
+  });
+  const codingTotal = CODING_PROBLEMS.length || 1;
+  const codingScore = clamp((codingAttemptedOrBetter*0.4 + codingSolved*0.6)/codingTotal, 0, 1);
+
+  const mcStats = collectionStats('machinecoding', allIdsFor('machinecoding'));
+  const mcScore = mcStats.total ? mcStats.done/mcStats.total : 0;
+
+  const sessions = STATE.mock.sessions.slice(-10);
+  let mockScore = 0;
+  if(sessions.length){
+    const avgScoreFrac = clamp(sessions.reduce((s,x)=>s+(x.avgScore||0),0) / sessions.length / 5, 0, 1);
+    const consistencyFrac = clamp(sessions.length/5, 0, 1);
+    mockScore = 0.5*avgScoreFrac + 0.5*consistencyFrac;
+  }
+
+  const projStats = collectionStats('project', allIdsFor('project'));
+  const projScore = projStats.total ? projStats.done/projStats.total : 0;
+
+  let scheduled=0, overdueCount=0;
+  const today = todayISO();
+  Object.keys(STATE.items).forEach(k=>{
+    const it = STATE.items[k];
+    if(it.nextReview){ scheduled++; if(it.nextReview<today) overdueCount++; }
+  });
+  const revisionScore = scheduled>0 ? clamp(1 - overdueCount/scheduled, 0, 1) : 0;
+
+  const weighted = topicScore*0.25 + codingScore*0.25 + mcScore*0.15 + mockScore*0.15 + projScore*0.10 + revisionScore*0.10;
+  return {
+    total: Math.round(weighted*100),
+    breakdown: [
+      { label:'Core topic confidence', weight:25, score: Math.round(topicScore*100) },
+      { label:'Coding attempts & successes', weight:25, score: Math.round(codingScore*100) },
+      { label:'Machine-coding practice', weight:15, score: Math.round(mcScore*100) },
+      { label:'Mock-interview consistency & scores', weight:15, score: Math.round(mockScore*100) },
+      { label:'Project-defence preparation', weight:10, score: Math.round(projScore*100) },
+      { label:'Revision completion', weight:10, score: Math.round(revisionScore*100) },
+    ]
+  };
+}
+
 /* =========================================================================
    PAGE: Dashboard (#dashboard)
    ========================================================================= */
@@ -15714,9 +16104,51 @@ function renderDashboard(){
         </div>
       </div>
     </div>
+
+    <div class="grid grid-2 mt-16">
+      ${renderDailyOutputCard()}
+      ${renderReadinessScoreCard()}
+    </div>
   `;
 }
 ROUTES['dashboard'] = renderDashboard;
+
+function renderDailyOutputCard(){
+  const items = todaysDailyOutput();
+  const doneCount = items.filter(i=>i.done).length;
+  return `
+    <div class="card">
+      <div class="flex justify-between items-center">
+        <h3 class="card-title">Today's Daily Output</h3>
+        <span class="badge ${doneCount===items.length?'badge-basic':'badge-neutral'}">${doneCount}/${items.length}</span>
+      </div>
+      <p class="small muted mt-8">Opening or reading an answer doesn't count here — each line below only checks off from something you actually did today.</p>
+      <ul class="mt-12">
+        ${items.map(i=>`<li class="small mt-8"><span aria-hidden="true">${i.done?'☑':'☐'}</span> <span class="visually-hidden-label">${i.done?'Done: ':'Not done: '}</span>${escapeHtml(i.label)}${i.detail?` (${i.detail})`:''}</li>`).join('')}
+      </ul>
+    </div>
+  `;
+}
+function renderReadinessScoreCard(){
+  const r = computeReadinessScore();
+  return `
+    <div class="card">
+      <div class="flex justify-between items-center">
+        <h3 class="card-title">Interview readiness score</h3>
+        <span class="stat-value" style="font-size:22px;">${r.total}%</span>
+      </div>
+      <div class="flex flex-col gap-8 mt-12">
+        ${r.breakdown.map(b=>`
+          <div>
+            <div class="flex justify-between items-center small"><span>${escapeHtml(b.label)} (${b.weight}%)</span><span>${b.score}%</span></div>
+            <div class="progress-track mt-8"><div class="progress-fill" style="width:${b.score}%"></div></div>
+          </div>
+        `).join('')}
+      </div>
+      <p class="small faint mt-12">This is an internal preparation estimate, not a guarantee of interview success. It never increases just because an answer was opened — coding credit needs a real test run, revision credit needs an actual reviewed outcome.</p>
+    </div>
+  `;
+}
 
 /* =========================================================================
    PAGE: 30-Day Plan (#plan, #plan/:day)
@@ -16067,8 +16499,9 @@ PAGE_ACTIONS['toggle-answer'] = (data)=>{
 
 /* ---------------------- Explain-aloud modal (shared) ---------------------- */
 let explainTimer = null;
-function explainAloudModal(questionText, revealHtml){
+function explainAloudModal(questionText, revealHtml, dailyFlag){
   let seconds = 20, phase = 'think';
+  markDailyFlag(dailyFlag || 'explainedAloud');
   openModal({
     title:'Explain aloud',
     bodyHtml:`<p class="small">${escapeHtml(questionText)}</p>
@@ -16103,12 +16536,12 @@ PAGE_ACTIONS['explain-aloud'] = (data)=>{
    your own browser only — nothing is sent anywhere.
    ========================================================================= */
 
-let codingFilter = { search:'', difficulty:'all', status:'all' };
+let codingFilter = { search:'', difficulty:'all', progress:'all' };
 function filteredCoding(){
   const s = codingFilter.search.toLowerCase().trim();
   return CODING_PROBLEMS.filter(c=>{
     if(codingFilter.difficulty!=='all' && c.difficulty!==codingFilter.difficulty) return false;
-    if(codingFilter.status!=='all' && getItem('coding',c.id).status!==codingFilter.status) return false;
+    if(codingFilter.progress!=='all' && codingProgressOf(c.id)!==codingFilter.progress) return false;
     if(s && !c.title.toLowerCase().includes(s)) return false;
     return true;
   });
@@ -16119,8 +16552,10 @@ function codingControlsHtml(){
     <div class="filter-bar">
       <span class="small faint">Difficulty:</span>
       ${['all','basic','intermediate','senior'].map(l=>`<button class="chip ${codingFilter.difficulty===l?'active':''}" data-action="coding-filter" data-key="difficulty" data-value="${l}">${l==='all'?'All':l}</button>`).join('')}
-      <span class="small faint" style="margin-left:10px;">Status:</span>
-      ${['all',...STATUS_ORDER].map(st=>`<button class="chip ${codingFilter.status===st?'active':''}" data-action="coding-filter" data-key="status" data-value="${st}">${st==='all'?'All':STATUS_LABEL[st]}</button>`).join('')}
+    </div>
+    <div class="filter-bar">
+      <span class="small faint">Progress:</span>
+      ${['all',...CODING_PROGRESS_VALUES].map(p=>`<button class="chip ${codingFilter.progress===p?'active':''}" data-action="coding-filter" data-key="progress" data-value="${p}">${p==='all'?'All':CODING_PROGRESS_LABEL[p]}</button>`).join('')}
     </div>
   `;
 }
@@ -16128,9 +16563,9 @@ function codingResultsHtml(){
   const list = filteredCoding();
   if(list.length===0) return `<div class="empty-state">No problems match these filters.</div>`;
   return `<div class="grid grid-3">${list.map(c=>{
-    const it = getItem('coding', c.id);
+    const progress = codingProgressOf(c.id);
     return `<div class="card clickable" data-nav="javascript-coding/${c.id}" style="cursor:pointer;">
-      <div class="flex justify-between items-center">${levelBadge(c.difficulty)}<span class="small"><span class="status-dot status-${it.status}"></span></span></div>
+      <div class="flex justify-between items-center">${levelBadge(c.difficulty)}<span class="badge badge-outline">${CODING_PROGRESS_LABEL[progress]}</span></div>
       <h3 class="card-title mt-8">${escapeHtml(c.title)}</h3>
       <p class="small muted">${escapeHtml(c.statement).slice(0,90)}${c.statement.length>90?'…':''}</p>
     </div>`;
@@ -16157,15 +16592,35 @@ function renderCodingList(){
   `;
 }
 
+function codingProgressOf(id){
+  const it = getItem('coding', id);
+  return it.codingProgress || 'not_viewed';
+}
+function markCodingProgress(id, next){
+  const order = CODING_PROGRESS_VALUES;
+  const it = ensureItem('coding', id);
+  const current = it.codingProgress || 'not_viewed';
+  // never move "backwards" from a solved/revealed state just from viewing/attempting again
+  const solvedStates = ['solved_no_help','solved_with_hints','revealed'];
+  if(solvedStates.indexOf(current)!==-1 && solvedStates.indexOf(next)===-1) return;
+  if(order.indexOf(next) > order.indexOf(current) || solvedStates.indexOf(next)!==-1){
+    it.codingProgress = next;
+    it.updatedAt = todayISO();
+    saveState();
+  }
+}
+
 function renderCodingDetail(id){
   const c = findById(CODING_PROBLEMS, id);
   if(!c) return `<div class="empty-state">Problem not found. <a href="#javascript-coding">Back to JavaScript Coding</a></div>`;
   const it = getItem('coding', c.id);
+  if(!it.codingProgress || it.codingProgress==='not_viewed') markCodingProgress(c.id, 'viewed');
+  const progress = codingProgressOf(c.id);
   return `
     <a href="#javascript-coding" class="small">← Back to JavaScript Coding</a>
     <div class="flex justify-between items-center wrap gap-8 mt-8">
       <h1 class="page-title" style="margin-bottom:0;">${escapeHtml(c.title)}</h1>
-      ${levelBadge(c.difficulty)}
+      <div class="input-row">${levelBadge(c.difficulty)}<span class="badge badge-outline" id="codingProgressBadge_${c.id}">${CODING_PROGRESS_LABEL[progress]}</span></div>
     </div>
     <div class="card mt-16">
       <h3 class="card-title">Problem</h3>
@@ -16174,7 +16629,7 @@ function renderCodingDetail(id){
       <p class="small mt-8"><strong>Constraints:</strong> ${nl2br(c.constraints)}</p>
     </div>
     <div class="card mt-16">
-      <details class="disclosure"><summary>Hints (${c.hints.length})</summary>
+      <details class="disclosure" data-hints-for="${c.id}"><summary>Hints (${c.hints.length})</summary>
         <ul class="mt-8">${c.hints.map(h=>`<li class="small mt-8">• ${escapeHtml(h)}</li>`).join('')}</ul>
       </details>
     </div>
@@ -16189,19 +16644,24 @@ function renderCodingDetail(id){
       </div>
       <div id="testResults_${c.id}" class="mt-12" aria-live="polite"></div>
     </div>
-    <div class="card mt-16">
-      <details class="disclosure"><summary>Reveal reference solution</summary>
-        <pre class="codeblock mt-8"><code>${escapeHtml(c.solution)}</code></pre>
-        <p class="small mt-8"><strong>Complexity:</strong> ${nl2br(c.complexity)}</p>
-        <p class="small mt-8"><strong>Follow-up variation:</strong> ${nl2br(c.variation)}</p>
-        <p class="small mt-8"><strong>How to explain this solution:</strong> ${nl2br(c.explain)}</p>
-      </details>
+    <div class="card mt-16" id="solutionCard_${c.id}">
+      <div id="solutionWrap_${c.id}">
+        <button class="btn btn-ghost" data-action="reveal-solution" data-id="${c.id}">Reveal reference solution</button>
+      </div>
     </div>
     <div class="card mt-16">
       ${statusButtons('coding', c.id)}
       <div class="mt-8">${reviewLine('coding', c.id)}</div>
       ${noteBox('coding', c.id)}
     </div>
+  `;
+}
+function solutionRevealHtml(c){
+  return `
+    <pre class="codeblock mt-8"><code>${escapeHtml(c.solution)}</code></pre>
+    <p class="small mt-8"><strong>Complexity:</strong> ${nl2br(c.complexity)}</p>
+    <p class="small mt-8"><strong>Follow-up variation:</strong> ${nl2br(c.variation)}</p>
+    <p class="small mt-8"><strong>How to explain this solution:</strong> ${nl2br(c.explain)}</p>
   `;
 }
 ROUTES['javascript-coding'] = (param)=>{
@@ -16363,7 +16823,9 @@ PAGE_ACTIONS['run-tests'] = async (data)=>{
   const runBtn = document.getElementById('runBtn_'+data.id);
   const stopBtn = document.getElementById('stopBtn_'+data.id);
   if(!c || !ta || !out) return;
-  ensureItem('coding', c.id).code = ta.value;
+  const it = ensureItem('coding', c.id);
+  it.code = ta.value;
+  markCodingProgress(c.id, 'attempted');
   saveState();
   if(runBtn){ runBtn.disabled = true; runBtn.textContent = 'Running...'; }
   if(stopBtn) stopBtn.classList.remove('hidden');
@@ -16382,8 +16844,42 @@ PAGE_ACTIONS['run-tests'] = async (data)=>{
   }
   out.innerHTML = renderTestResults(outcome.results, outcome.timedOut? `<div class="warn-banner mt-8">Execution was stopped after ${CODING_TIMEOUT_MS/1000}s. Check for an infinite loop or a promise that never resolves.</div>` : '');
   const passedAll = !outcome.timedOut && outcome.results.every(r=>r.pass===true);
-  if(passedAll) toast('All tests passed!');
+  const anyPass = outcome.results.some(r=>r.pass===true);
+  if(passedAll){
+    markCodingProgress(c.id, it.hintsViewed ? 'solved_with_hints' : 'solved_no_help');
+    toast('All tests passed!');
+  } else {
+    markCodingProgress(c.id, anyPass ? 'tests_partial' : 'attempted');
+  }
+  const badge = document.getElementById('codingProgressBadge_'+c.id);
+  if(badge) badge.textContent = CODING_PROGRESS_LABEL[codingProgressOf(c.id)];
 };
+
+PAGE_ACTIONS['reveal-solution'] = (data)=>{
+  const attempted = ['attempted','tests_partial','solved_no_help','solved_with_hints','revealed'].indexOf(codingProgressOf(data.id)) !== -1;
+  if(!attempted){
+    confirmModal(
+      'Reveal the solution?',
+      'You haven\'t attempted this problem yet — no test run is recorded. Solving it yourself first (even partially) is how the practice actually builds the skill. Reveal the solution anyway?',
+      'Reveal anyway',
+      ()=>doRevealSolution(data.id)
+    );
+    return;
+  }
+  doRevealSolution(data.id);
+};
+function doRevealSolution(id){
+  const c = findById(CODING_PROBLEMS, id);
+  if(!c) return;
+  const it = ensureItem('coding', id);
+  const preSolved = ['solved_no_help','solved_with_hints'].indexOf(it.codingProgress)!==-1;
+  if(!preSolved) it.codingProgress = 'revealed';
+  saveState();
+  const wrap = document.getElementById('solutionWrap_'+id);
+  if(wrap) wrap.innerHTML = solutionRevealHtml(c);
+  const badge = document.getElementById('codingProgressBadge_'+id);
+  if(badge) badge.textContent = CODING_PROGRESS_LABEL[codingProgressOf(id)];
+}
 
 PAGE_ACTIONS['stop-tests'] = (data)=>{
   terminateActiveCodingWorker();
@@ -16648,6 +17144,7 @@ function projectQuestionCard(pid, q){
         <details class="disclosure mt-8"><summary>Technical deep-dive</summary><p class="small mt-8">${nl2br(q.deepDive)}</p></details>
         <details class="disclosure mt-8"><summary>Weak answer to avoid</summary><p class="small mt-8">${nl2br(q.weak)}</p></details>
       </div>
+      <button class="btn btn-ghost btn-sm mt-8" data-action="project-explain-aloud" data-id="${q.id}">Explain aloud</button>
       ${q.honestyWarning?`<div class="warn-banner mt-12">Honesty check: ${escapeHtml(q.honestyWarning)}</div>`:''}
       <div class="mt-8"><strong class="small">Likely follow-ups:</strong><ul>${q.followUps.map(f=>`<li class="small mt-8">• ${escapeHtml(f)}</li>`).join('')}</ul></div>
       <div class="divider"></div>
@@ -16711,6 +17208,13 @@ function renderProjects(param){
   `;
 }
 ROUTES['projects'] = renderProjects;
+
+PAGE_ACTIONS['project-explain-aloud'] = (data)=>{
+  let found = null;
+  for(const p of PROJECTS){ const q = findById(p.questions, data.id); if(q){ found = q; break; } }
+  if(!found) return;
+  explainAloudModal(found.question, `<p class="small"><strong>90-second answer:</strong> ${nl2br(found.ninetySec)}</p>`, 'projectSpoken');
+};
 
 /* =========================================================================
    PAGE: AI Engineering (#ai)
@@ -17164,8 +17668,28 @@ PAGE_ACTIONS['hr-drill'] = ()=>{
 
 function resetItemSchedule(collection,id){
   const it = ensureItem(collection,id);
-  it.nextReview = null; it.stage = 0;
+  it.nextReview = null; it.masteryStreak = 0;
   saveState();
+}
+
+const REVIEW_OUTCOMES = [
+  { key:'needs_revision', label:'Forgot', hint:'Couldn\'t recall it — back tomorrow.' },
+  { key:'learning', label:'Difficult', hint:'Recalled it with effort — back tomorrow.' },
+  { key:'confident', label:'Good', hint:'Recalled it correctly — next review in 3–7 days.' },
+  { key:'mastered', label:'Easy', hint:'Recalled it instantly — next review in 14–30 days.' },
+];
+function openReviewOutcomeModal(collection, id){
+  const title = itemTitle(collection, id);
+  openModal({
+    title: 'How did that review go?',
+    bodyHtml: `<p class="small">${escapeHtml(title)}</p>
+      <div class="flex flex-col gap-8 mt-12">
+        ${REVIEW_OUTCOMES.map(o=>`
+          <button class="btn btn-block" style="justify-content:flex-start;text-align:left;" data-action="revision-outcome" data-collection="${collection}" data-id="${escapeHtml(id)}" data-outcome="${o.key}">
+            <strong>${o.label}</strong> — <span class="small muted">${escapeHtml(o.hint)}</span>
+          </button>`).join('')}
+      </div>`,
+  });
 }
 
 function revisionRow(entry){
@@ -17194,7 +17718,7 @@ function renderRevision(){
 
   return `
     <h1 class="page-title">Revision Queue</h1>
-    <p class="page-sub">Spaced revision: Learning/Needs revision → tomorrow. Confident → 3 days, then 7. Mastered → 14 days.</p>
+    <p class="page-sub">Spaced revision: clicking "Reviewed" asks how it actually went (Forgot/Difficult/Good/Easy) rather than assuming — Forgot/Difficult → tomorrow, Good → 3 days then 7, Easy → 14 days then 30.</p>
 
     <div class="grid grid-3">
       <div class="stat-card"><div class="stat-label">Overdue</div><div class="stat-value" style="color:var(--bad);">${overdue.length}</div></div>
@@ -17224,9 +17748,13 @@ function renderRevision(){
 ROUTES['revision'] = renderRevision;
 
 PAGE_ACTIONS['revision-reviewed'] = (data)=>{
-  const it = getItem(data.collection, data.id);
-  setItemStatus(data.collection, data.id, it.status==='not_started'?'learning':it.status);
-  toast('Rescheduled.');
+  openReviewOutcomeModal(data.collection, data.id);
+};
+PAGE_ACTIONS['revision-outcome'] = (data)=>{
+  setItemStatus(data.collection, data.id, data.outcome);
+  closeModal();
+  const outcomeLabel = (REVIEW_OUTCOMES.find(o=>o.key===data.outcome)||{}).label || data.outcome;
+  toast(`Marked "${outcomeLabel}" — rescheduled.`);
   renderInto();
 };
 PAGE_ACTIONS['revision-reset'] = (data)=>{
@@ -17312,7 +17840,7 @@ function renderProgress(){
       <div class="input-row mt-8">
         <button class="btn" data-action="export-data">Export backup (JSON)</button>
         <button class="btn" data-action="import-data-trigger">Import backup</button>
-        <button class="btn" data-action="print-page">Print-friendly revision view</button>
+        <a class="btn" href="#print-report">Open printable revision report</a>
         <button class="btn btn-danger" data-action="reset-data">Reset all data</button>
       </div>
     </div>
@@ -17337,6 +17865,226 @@ function renderProgress(){
   `;
 }
 ROUTES['progress'] = renderProgress;
+
+/* =========================================================================
+   PAGE: Printable Revision Report (#print-report)
+   A dedicated report assembling everything relevant for a print/PDF session,
+   independent of whatever page you were last on — not just "print the
+   current page".
+   ========================================================================= */
+
+function reportRow(entry){
+  return `<li class="small mt-8">${escapeHtml(entry.title)} <span class="faint">— ${escapeHtml(COLLECTION_LABEL[entry.collection]||entry.collection)}, due ${fmtDateHuman(entry.nextReview)}</span></li>`;
+}
+
+function renderPrintReport(){
+  const due = getDueRevisionItems();
+  const today = todayISO();
+  const overdue = due.filter(d=>d.nextReview<today);
+  const dueToday = due.filter(d=>d.nextReview===today);
+  const weakTopics = weakTopicsList();
+  const weakQuestions = QUESTIONS.filter(q=> getItem('question',q.id).status==='needs_revision');
+  const weakProjectAnswers = PROJECTS.flatMap(p=>p.questions.filter(q=> getItem('project',q.id).status==='needs_revision').map(q=>({project:p.name, question:q.question})));
+  const notes = allNotesList();
+  const recentMockWeaknesses = STATE.mock.sessions.slice(-5).reverse().filter(s=>s.weakTopics.length);
+  const planProgress = PLAN_30.map(d=>({ day:d.day, title:d.title, ...planDayProgress(d.day), status: getItem('planday', String(d.day)).status }))
+    .filter(d=>d.done>0 || d.status!=='not_started');
+
+  return `
+    <div class="flex justify-between items-center wrap gap-8 no-print">
+      <h1 class="page-title" style="margin-bottom:0;">Printable Revision Report</h1>
+      <div class="input-row">
+        <button class="btn btn-primary" data-action="print-page">Print this report</button>
+        <a href="#progress" class="btn btn-ghost">Back</a>
+      </div>
+    </div>
+    <p class="page-sub">Generated ${fmtDateHuman(today)} for Kandala Guruprasad's Frontend Interview Command Center.</p>
+
+    <h2 class="section-title">Overdue (${overdue.length})</h2>
+    <div class="card">${overdue.length? `<ul>${overdue.map(reportRow).join('')}</ul>` : '<p class="small muted">Nothing overdue.</p>'}</div>
+
+    <h2 class="section-title">Due today (${dueToday.length})</h2>
+    <div class="card">${dueToday.length? `<ul>${dueToday.map(reportRow).join('')}</ul>` : '<p class="small muted">Nothing due today.</p>'}</div>
+
+    <h2 class="section-title">Weak topics (${weakTopics.length})</h2>
+    <div class="card">${weakTopics.length? `<ul>${weakTopics.map(t=>`<li class="small mt-8">${escapeHtml(t.title)} <span class="faint">— ${escapeHtml(CATEGORY_LABEL[t.category]||t.category)}</span></li>`).join('')}</ul>` : '<p class="small muted">No weak topics right now.</p>'}</div>
+
+    <h2 class="section-title">Questions marked for revision (${weakQuestions.length})</h2>
+    <div class="card">${weakQuestions.length? `<ul>${weakQuestions.map(q=>`<li class="small mt-8">${escapeHtml(q.question)} <span class="faint">— ${escapeHtml(CATEGORY_LABEL[q.category]||q.category)}</span></li>`).join('')}</ul>` : '<p class="small muted">No questions currently marked for revision.</p>'}</div>
+
+    <h2 class="section-title">Weak project-defence answers (${weakProjectAnswers.length})</h2>
+    <div class="card">${weakProjectAnswers.length? `<ul>${weakProjectAnswers.map(w=>`<li class="small mt-8">${escapeHtml(w.question)} <span class="faint">— ${escapeHtml(w.project)}</span></li>`).join('')}</ul>` : '<p class="small muted">No project answers currently marked for revision.</p>'}</div>
+
+    <h2 class="section-title">Recent mock-interview weaknesses</h2>
+    <div class="card">${recentMockWeaknesses.length? recentMockWeaknesses.map(s=>`
+      <div class="mt-8"><strong class="small">${fmtDateHuman(s.date)} — ${escapeHtml((MOCK_CATEGORIES.find(c=>c.id===s.categoryId)||{label:s.categoryId}).label)}</strong>
+        <ul>${s.weakTopics.map(t=>`<li class="small mt-8">${escapeHtml(t)}</li>`).join('')}</ul>
+      </div>`).join('') : '<p class="small muted">No weak topics flagged in recent mock-interview sessions.</p>'}</div>
+
+    <h2 class="section-title">30-day plan progress</h2>
+    <div class="card">
+      ${planProgress.length? `<table class="data-table"><thead><tr><th>Day</th><th>Title</th><th>Tasks</th><th>Confidence</th></tr></thead>
+      <tbody>${planProgress.map(d=>`<tr><td>${d.day}</td><td>${escapeHtml(d.title)}</td><td>${d.done}/${d.total}</td><td>${STATUS_LABEL[d.status]}</td></tr>`).join('')}</tbody></table>`
+      : '<p class="small muted">No plan-day progress recorded yet.</p>'}
+    </div>
+
+    <h2 class="section-title">Personal notes (${notes.length})</h2>
+    <div class="card">${notes.length? notes.map(n=>`
+      <div class="mt-8"><strong class="small">${escapeHtml(n.title)}</strong> <span class="faint small">— ${escapeHtml(COLLECTION_LABEL[n.collection]||n.collection)}</span>
+        <p class="small">${nl2br(n.notes)}</p>
+      </div>`).join('') : '<p class="small muted">No notes written yet.</p>'}</div>
+  `;
+}
+ROUTES['print-report'] = renderPrintReport;
+
+/* =========================================================================
+   Global search + command palette (Ctrl+K / Cmd+K)
+   Searches across topics, questions, coding problems, machine-coding tasks,
+   labs, system designs, project questions, AI content, HR questions and
+   personal notes. Reuses the accessible modal (focus trap, Escape, return
+   focus) from core.js; adds its own arrow-key/Enter handling on the input,
+   following the ARIA combobox + listbox pattern.
+   ========================================================================= */
+
+let paletteResults = [];
+let paletteActiveIndex = -1;
+
+function buildSearchIndex(){
+  const idx = [];
+  TOPICS.forEach(t=> idx.push({ collection:'topic', id:t.id, title:t.title, category:CATEGORY_LABEL[t.category]||t.category, snippet:t.explanation }));
+  QUESTIONS.forEach(q=> idx.push({ collection:'question', id:q.id, title:q.question, category:CATEGORY_LABEL[q.category]||q.category, snippet:q.concise }));
+  CODING_PROBLEMS.forEach(c=> idx.push({ collection:'coding', id:c.id, title:c.title, category:'JS/TS Coding', snippet:c.statement }));
+  MACHINE_CODING.forEach(m=> idx.push({ collection:'machinecoding', id:m.id, title:m.title, category:'Machine Coding', snippet:m.requirements }));
+  LABS.forEach(l=> idx.push({ collection:'lab', id:l.id, title:l.title, category:'React/Next Labs', snippet:l.scenario }));
+  SYSTEM_DESIGNS.forEach(s=> idx.push({ collection:'systemdesign', id:s.id, title:s.title, category:'System Design', snippet:s.tradeoffs||'' }));
+  PROJECTS.forEach(p=> p.questions.forEach(q=> idx.push({ collection:'project', id:q.id, title:q.question, category:'Project — '+p.name, snippet:q.thirtySec })));
+  AI_EXERCISES.forEach(a=> idx.push({ collection:'ai', id:a.id, title:a.title, category:'AI Engineering', snippet:a.scenario }));
+  HR_QUESTIONS.forEach(h=> idx.push({ collection:'hr', id:h.id, title:h.question, category:'HR & Communication', snippet:h.shortVersion }));
+  allNotesList().forEach(n=> idx.push({ collection:n.collection, id:n.id, title:n.title, category:'Your notes', snippet:n.notes }));
+  return idx;
+}
+
+function searchIndexQuery(term){
+  const q = term.toLowerCase().trim();
+  if(!q) return [];
+  const idx = buildSearchIndex();
+  const scored = [];
+  for(const item of idx){
+    const titleLower = item.title.toLowerCase();
+    let score = -1;
+    if(titleLower.startsWith(q)) score = 3;
+    else if(titleLower.includes(q)) score = 2;
+    else if((item.snippet||'').toLowerCase().includes(q)) score = 1;
+    if(score>=0) scored.push(Object.assign({score}, item));
+  }
+  scored.sort((a,b)=> b.score-a.score);
+  return scored.slice(0,40);
+}
+
+function paletteOptionHtml(r,i){
+  return `<li role="option" id="paletteOpt_${i}" class="item-row" style="cursor:pointer;" data-action="palette-select" data-index="${i}">
+    <div class="flex-col"><span class="small" style="font-weight:600;">${escapeHtml(r.title)}</span><span class="small faint">${escapeHtml(r.category)}</span></div>
+  </li>`;
+}
+function updatePaletteCount(term){
+  const el = document.getElementById('paletteCount');
+  if(!el) return;
+  if(!term.trim()) el.textContent = (STATE.recentSearches||[]).length ? 'Recent searches' : '';
+  else el.textContent = `${paletteResults.length} result${paletteResults.length===1?'':'s'}`;
+}
+function highlightActiveOption(){
+  document.querySelectorAll('#paletteListbox [role="option"]').forEach((el,i)=>{
+    el.style.background = i===paletteActiveIndex ? 'var(--surface-2)' : 'transparent';
+  });
+  const input = document.getElementById('paletteInput');
+  if(input){
+    if(paletteActiveIndex>=0) input.setAttribute('aria-activedescendant', 'paletteOpt_'+paletteActiveIndex);
+    else input.removeAttribute('aria-activedescendant');
+  }
+}
+function scrollActiveIntoView(){
+  const el = document.getElementById('paletteOpt_'+paletteActiveIndex);
+  if(el) el.scrollIntoView({block:'nearest'});
+}
+function renderPaletteResults(){
+  const listbox = document.getElementById('paletteListbox');
+  const input = document.getElementById('paletteInput');
+  if(!listbox || !input) return;
+  const term = input.value;
+  if(!term.trim()){
+    const recents = STATE.recentSearches || [];
+    paletteResults = recents.slice();
+    paletteActiveIndex = -1;
+    listbox.innerHTML = recents.length
+      ? recents.map((r,i)=>paletteOptionHtml(r,i)).join('')
+      : `<li class="small muted" style="padding:16px 0;">Start typing to search topics, questions, coding problems, machine coding, labs, system design, project answers, AI content, HR answers and your notes.</li>`;
+  } else {
+    paletteResults = searchIndexQuery(term);
+    paletteActiveIndex = paletteResults.length ? 0 : -1;
+    listbox.innerHTML = paletteResults.length
+      ? paletteResults.map((r,i)=>paletteOptionHtml(r,i)).join('')
+      : `<li class="small muted" style="padding:16px 0;">No results for "${escapeHtml(term)}".</li>`;
+  }
+  updatePaletteCount(term);
+  highlightActiveOption();
+}
+function paletteInputKeydown(e){
+  if(e.key==='ArrowDown'){
+    e.preventDefault();
+    if(paletteResults.length){ paletteActiveIndex = Math.min(paletteResults.length-1, paletteActiveIndex+1); highlightActiveOption(); scrollActiveIntoView(); }
+  } else if(e.key==='ArrowUp'){
+    e.preventDefault();
+    if(paletteResults.length){ paletteActiveIndex = Math.max(0, paletteActiveIndex-1); highlightActiveOption(); scrollActiveIntoView(); }
+  } else if(e.key==='Enter'){
+    e.preventDefault();
+    if(paletteActiveIndex>=0) selectPaletteResult(paletteActiveIndex);
+  }
+}
+function selectPaletteResult(i){
+  const r = paletteResults[i];
+  if(!r) return;
+  const input = document.getElementById('paletteInput');
+  const term = input ? input.value.trim() : '';
+  if(term){
+    const entry = { term, title:r.title, collection:r.collection, id:r.id, category:r.category };
+    STATE.recentSearches = [entry].concat((STATE.recentSearches||[]).filter(x=> !(x.collection===r.collection && x.id===r.id))).slice(0,8);
+    saveState(true);
+  }
+  closeModal();
+  navigateToItem(r.collection, r.id);
+}
+function openCommandPalette(){
+  openModal({
+    title: 'Search',
+    bodyHtml: `
+      <div class="field" style="margin-bottom:0;">
+        <label for="paletteInput" class="visually-hidden-label">Search everything</label>
+        <input type="text" id="paletteInput" role="combobox" aria-expanded="true" aria-controls="paletteListbox" aria-autocomplete="list" aria-label="Search everything" placeholder="Search topics, questions, coding, labs, system design, projects, AI, HR, notes...">
+      </div>
+      <p class="small faint mt-8" id="paletteCount" aria-live="polite"></p>
+      <ul id="paletteListbox" role="listbox" aria-label="Search results" style="list-style:none;padding:0;margin:4px 0 0;max-height:50vh;overflow-y:auto;"></ul>
+    `,
+    onOpen:()=>{
+      renderPaletteResults();
+      const input = document.getElementById('paletteInput');
+      if(input){
+        input.addEventListener('keydown', paletteInputKeydown);
+        input.addEventListener('input', renderPaletteResults);
+        input.focus();
+      }
+    }
+  });
+}
+PAGE_ACTIONS['open-search'] = openCommandPalette;
+PAGE_ACTIONS['palette-select'] = (data)=> selectPaletteResult(parseInt(data.index,10));
+
+document.addEventListener('keydown', (e)=>{
+  const key = (e.key||'').toLowerCase();
+  if((e.ctrlKey || e.metaKey) && key==='k'){
+    e.preventDefault();
+    openCommandPalette();
+  }
+});
 
 /* =========================================================================
    BOOT
