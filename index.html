@@ -15111,6 +15111,8 @@ function defaultState(){
       dailyQuests: { date:null, bonusClaimed:false },
       aloudAwardedToday: { date:null, ids:[] },
       aloudTotalCount: 0,      // lifetime count, for the "No Notes Needed" achievement
+      awardedKeys: {},         // idempotency ledger: key -> true, so no real action ever pays out XP twice
+      activityLog: [],         // [{action, amount, at: ISO timestamp}] — used for date-specific daily-quest checks
     }
   };
 }
@@ -15275,11 +15277,11 @@ function setItemStatus(collection,id,status){
     if(isNowGood){
       const title = typeof itemTitle==='function' ? itemTitle(collection,id) : id;
       if(collection==='machinecoding' || collection==='lab'){
-        if(!wasAlreadyGood) awardXP(100, `Practical task complete: ${title}`);
+        if(!wasAlreadyGood) awardXP(100, `Practical task complete: ${title}`, `status:${collection}:${id}:first-complete`);
       } else if(wasAlreadyGood){
-        awardXP(40, `Successfully revised: ${title}`);
+        awardXP(40, `Successfully revised: ${title}`, `status:${collection}:${id}:revised:${todayISO()}`);
       } else {
-        awardXP(20, `Confidence gained: ${title}`);
+        awardXP(20, `Confidence gained: ${title}`, `status:${collection}:${id}:first-confident`);
       }
     }
     if(collection==='project' && typeof checkProjectBossProgress==='function') checkProjectBossProgress();
@@ -15921,6 +15923,8 @@ function validateAndSanitizeBackup(parsed){
     if(q.dailyQuests && typeof q.dailyQuests==='object') sanitized.quest.dailyQuests = q.dailyQuests;
     if(q.aloudAwardedToday && typeof q.aloudAwardedToday==='object') sanitized.quest.aloudAwardedToday = q.aloudAwardedToday;
     if(typeof q.aloudTotalCount==='number') sanitized.quest.aloudTotalCount = Math.max(0, Math.floor(q.aloudTotalCount));
+    if(q.awardedKeys && typeof q.awardedKeys==='object') sanitized.quest.awardedKeys = q.awardedKeys;
+    if(Array.isArray(q.activityLog)) sanitized.quest.activityLog = q.activityLog.filter(e=>e && typeof e==='object' && typeof e.at==='string').slice(-500);
   }
 
   return { ok:true, state: sanitized, warnings, counts:{ items:itemsKept, plan:planKept, mock:mockKept } };
@@ -16204,21 +16208,46 @@ function computeReadinessScore(){
 function ensureQuestState(){
   if(!STATE.quest) STATE.quest = {
     xp:0, xpLog:[], bossPassed:{}, bossAttempts:{}, achievements:[],
-    dailyQuests:{date:null,bonusClaimed:false}, aloudAwardedToday:{date:null,ids:[]}, aloudTotalCount:0
+    dailyQuests:{date:null,bonusClaimed:false}, aloudAwardedToday:{date:null,ids:[]}, aloudTotalCount:0,
+    awardedKeys:{}, activityLog:[]
   };
+  if(!STATE.quest.awardedKeys) STATE.quest.awardedKeys = {};
+  if(!STATE.quest.activityLog) STATE.quest.activityLog = [];
   return STATE.quest;
 }
 
-function awardXP(amount, reason){
+/* awardXP(amount, reason, key) — key is an idempotency token unique to the
+   real-world action being rewarded (e.g. `coding:cp-05:solved_no_help`,
+   `status:topic:html-forms:revised:2026-09-23`). If that key has already
+   been awarded, this is a no-op: repeating the same action (toggling a
+   status back and forth, re-submitting an already-passed boss, re-running
+   already-solved tests) never grants XP twice. Callers that omit a key are
+   asserting the action itself can't be repeated to farm XP; prefer passing
+   one whenever the underlying state is reversible. */
+function awardXP(amount, reason, key){
   if(!amount) return;
   const q = ensureQuestState();
+  if(key){
+    if(q.awardedKeys[key]) return;
+    q.awardedKeys[key] = true;
+  }
   q.xp = (q.xp||0) + amount;
   q.xpLog = q.xpLog||[];
   q.xpLog.push({ date: todayISO(), amount, reason });
   if(q.xpLog.length>300) q.xpLog = q.xpLog.slice(-300);
+  q.activityLog.push({ action: key||reason, amount, at: new Date().toISOString() });
+  if(q.activityLog.length>500) q.activityLog = q.activityLog.slice(-500);
   saveState();
   showXPPopup(amount, reason);
   checkAchievements();
+}
+
+/* today's activity log entries — used by daily quests so "done" always
+   means "happened today", never a lifetime total. */
+function todaysActivityLog(){
+  const today = todayISO();
+  const q = ensureQuestState();
+  return q.activityLog.filter(e=> (e.at||'').slice(0,10)===today);
 }
 
 function showXPPopup(amount, reason){
@@ -16257,6 +16286,15 @@ function codingSolvedCount(){
 }
 function codingSolvedNoHelpCount(){
   return CODING_PROBLEMS.filter(c=> getItem('coding',c.id).codingProgress==='solved_no_help').length;
+}
+/* today-only, for the daily quest — a lifetime count would show this quest
+   as permanently "done" the first time any problem is ever solved cleanly. */
+function codingSolvedNoHelpToday(){
+  const today = todayISO();
+  return CODING_PROBLEMS.some(c=>{
+    const it = getItem('coding', c.id);
+    return it.codingProgress==='solved_no_help' && it.updatedAt===today;
+  });
 }
 function labsConfidentCount(){
   return LABS.filter(l=>{ const s=getItem('lab',l.id).status; return s==='confident'||s==='mastered'; }).length;
@@ -16323,7 +16361,7 @@ const QUEST_TEMPLATES = [
   { id:'q_mock', label:'Complete one mock-interview session', xp:60, check: ()=> todaysDailyOutput().find(i=>i.key==='mock').done },
   { id:'q_project', label:'Speak one project answer aloud', xp:30, check: ()=> !!getDailyFlags().projectSpoken },
   { id:'q_lab', label:'Complete one React/Next.js lab', xp:40, check: ()=> todaysDailyOutput().find(i=>i.key==='react').done },
-  { id:'q_solve', label:'Solve one coding problem without help', xp:50, check: ()=> codingSolvedNoHelpCount()>0 },
+  { id:'q_solve', label:'Solve one coding problem without help', xp:50, check: ()=> codingSolvedNoHelpToday() },
 ];
 function seededDayIndex(seedStr, mod){
   let h = 0;
@@ -16392,16 +16430,21 @@ function awardAloudXPOnce(promptId){
   q.aloudAwardedToday.ids.push(promptId);
   q.aloudTotalCount = (q.aloudTotalCount||0) + 1;
   saveState();
-  awardXP(10, 'Attempted an answer aloud');
+  awardXP(10, 'Attempted an answer aloud', `aloud:${promptId}:${today}`);
 }
 
 /* =========================================================================
-   XP award sites (for reference — the only places XP is ever granted):
-   - 34_questions.js  explainAloudModal()      -> awardAloudXPOnce (10 XP)
-   - 35_coding.js     run-tests handler         -> attempted/partial/solved (20/30/40/60 XP)
-   - 10_core.js       setItemStatus()           -> confidence gained / successful revision (20/40 XP)
-   - 41_mock.js       finishMockSession()       -> session completed (120 XP)
-   - 52_quest_pages.js boss battle resolution   -> boss passed (150 XP)
+   XP award sites (for reference — the only places XP is ever granted).
+   Every call passes a `key` unique to the real action, so repeating the
+   same action (toggling a status, re-claiming a passed boss, re-running
+   already-solved tests) never re-awards XP — see awardXP() above.
+   - 34_questions.js  explainAloudModal()      -> awardAloudXPOnce (10 XP), key: aloud:<promptId>:<date>
+   - 35_coding.js     run-tests handler         -> attempted/partial/solved (20/30/40/60 XP), key: coding:<id>:<progress>
+   - 10_core.js       setItemStatus()           -> confidence gained / successful revision (20/40/100 XP),
+                                                    key: status:<collection>:<id>:first-confident|first-complete
+                                                    or status:<collection>:<id>:revised:<date>
+   - 41_mock.js       finishMockSession()       -> session completed (120 XP), key: mock:<startedAt>
+   - 52_quest_pages.js boss battle resolution   -> boss passed (150 XP), key: boss:<levelId>:pass[:<subId>]
    Opening a page, a details/summary disclosure, or a model answer never
    awards anything by itself.
    ========================================================================= */
@@ -16983,7 +17026,7 @@ function markCodingProgress(id, next){
       const c = findById(CODING_PROBLEMS, id);
       const title = c ? c.title : id;
       const xpByProgress = { attempted:20, tests_partial:30, solved_with_hints:40, solved_no_help:60 };
-      if(xpByProgress[next]) awardXP(xpByProgress[next], `${CODING_PROGRESS_LABEL[next]}: ${title}`);
+      if(xpByProgress[next]) awardXP(xpByProgress[next], `${CODING_PROGRESS_LABEL[next]}: ${title}`, `coding:${id}:${next}`);
     }
   }
 }
@@ -17805,7 +17848,8 @@ function finishMockSession(){
   STATE.activeMock = null;
   touchStreak();
   saveState(true);
-  if(scored.length>0 && typeof awardXP==='function') awardXP(120, 'Mock interview completed');
+  const answeredEnough = scored.length >= Math.max(1, Math.ceil(mockSession.questions.length/2));
+  if(answeredEnough && typeof awardXP==='function') awardXP(120, 'Mock interview completed', `mock:${mockSession.startedAt}`);
   if(mockSession.questBoss && typeof resolveQuestMockBoss==='function') resolveQuestMockBoss(mockSession);
   renderMockInto();
 }
@@ -18731,10 +18775,11 @@ function renderCodingBossCard(level){
 PAGE_ACTIONS['quest-claim-coding-boss'] = (data)=>{
   const level = QUEST_LEVELS.find(l=>l.id===parseInt(data.level,10));
   if(!level) return;
+  if(ensureQuestState().bossPassed[level.id]) return;
   const prog = codingBossProgress(level);
   if(prog.pct<70) return;
   recordBossAttempt(level.id, prog.pct, true);
-  awardXP(150, `Boss battle passed: ${level.title}`);
+  awardXP(150, `Boss battle passed: ${level.title}`, `boss:${level.id}:pass`);
   triggerLevelUp(level);
   navigate('quest/'+level.id);
 };
@@ -18800,10 +18845,11 @@ PAGE_ACTIONS['quest-boss-rate'] = (data, el)=>{
   if(el2) el2.textContent = `Score so far: ${Math.round(total)}% (need 70% to pass)`;
 };
 function resolveClaimBoss(level, score){
+  if(ensureQuestState().bossPassed[level.id]) { navigate('quest/'+level.id); return; }
   const passed = score>=70;
   recordBossAttempt(level.id, score, passed);
   if(passed){
-    awardXP(150, `Boss battle passed: ${level.title}`);
+    awardXP(150, `Boss battle passed: ${level.title}`, `boss:${level.id}:pass`);
     triggerLevelUp(level);
   } else {
     toast(`Boss battle result: ${score}% — under 70%. Retry tomorrow.`);
@@ -18839,7 +18885,7 @@ function checkProjectBossProgress(){
   const allPassed = PROJECTS.every(p=>projectBossSubStatus(p).passed);
   if(allPassed){
     recordBossAttempt(9, 100, true);
-    awardXP(150, 'Boss battle passed: Project Defender');
+    awardXP(150, 'Boss battle passed: Project Defender', 'boss:9:pass');
     triggerLevelUp(level);
   }
 }
@@ -18886,7 +18932,7 @@ function resolveQuestMockBoss(session){
   recordBossAttempt(qb.levelId, scorePct, passed, qb.subId, marksLevelComplete);
   const level = QUEST_LEVELS.find(l=>l.id===qb.levelId);
   if(passed){
-    awardXP(150, `Boss battle passed: ${level?level.title:''}${qb.subId?' ('+qb.subId+'m)':''}`);
+    awardXP(150, `Boss battle passed: ${level?level.title:''}${qb.subId?' ('+qb.subId+'m)':''}`, `boss:${qb.levelId}:pass:${qb.subId||'main'}`);
     if(marksLevelComplete) triggerLevelUp(level);
   } else {
     toast(qb.hearts<=0 ? 'Boss battle lost — out of hearts. Retry tomorrow.' : `Boss battle result: ${scorePct}% (need 70%). Retry tomorrow.`);
