@@ -1,0 +1,37 @@
+[
+  {
+    "id": "first_blood",
+    "title": "First Blood",
+    "description": "Pass your first boss battle."
+  },
+  {
+    "id": "no_notes_needed",
+    "title": "No Notes Needed",
+    "description": "Explain 10 concepts aloud."
+  },
+  {
+    "id": "clean_coder",
+    "title": "Clean Coder",
+    "description": "Solve 5 coding problems without hints."
+  },
+  {
+    "id": "streak_keeper",
+    "title": "Streak Keeper",
+    "description": "Reach a 7-day preparation streak."
+  },
+  {
+    "id": "halfway_hero",
+    "title": "Halfway Hero",
+    "description": "Pass the boss at Level 6."
+  },
+  {
+    "id": "daily_disciplined",
+    "title": "Daily Discipline",
+    "description": "Complete all 3 daily quests in one day."
+  },
+  {
+    "id": "quest_complete",
+    "title": "Quest Complete",
+    "description": "Pass the Level 10 final boss."
+  }
+]

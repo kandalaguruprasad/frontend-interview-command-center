@@ -1,0 +1,3073 @@
+[
+  {
+    "id": "cp-01",
+    "title": "Reverse a string",
+    "difficulty": "basic",
+    "functionName": "reverseString",
+    "statement": "Write a function that takes a string and returns a new string with the characters in reverse order. This is a classic warm-up used to check comfort with basic string/array methods in JavaScript.",
+    "examples": "Input: \"hello\" -> Output: \"olleh\"\nInput: \"\" -> Output: \"\"\nInput: \"a\" -> Output: \"a\"",
+    "constraints": "Input is a regular JS string (assume BMP characters, no need to handle surrogate pairs/emoji). Do not use a built-in \"reverse string\" library function beyond array/string primitives.",
+    "starter": "function reverseString(str) {\n  // your code here\n}",
+    "tests": [
+      {
+        "args": [
+          "hello"
+        ],
+        "expected": "olleh",
+        "desc": "reverses a simple word"
+      },
+      {
+        "args": [
+          ""
+        ],
+        "expected": "",
+        "desc": "handles empty string"
+      },
+      {
+        "args": [
+          "a"
+        ],
+        "expected": "a",
+        "desc": "single character stays the same"
+      },
+      {
+        "args": [
+          "racecar"
+        ],
+        "expected": "racecar",
+        "desc": "palindrome reversed equals itself"
+      },
+      {
+        "args": [
+          "Hello World!"
+        ],
+        "expected": "!dlroW olleH",
+        "desc": "handles spaces and punctuation"
+      },
+      {
+        "args": [
+          "12345"
+        ],
+        "expected": "54321",
+        "desc": "reverses a numeric string"
+      }
+    ],
+    "hints": [
+      "Strings are iterable, so you can spread them into an array.",
+      "Array.prototype.reverse() reverses in place on arrays, not strings.",
+      "split(\"\"), reverse(), join(\"\") is the classic one-liner.",
+      "Think about how you would do it with a simple for loop building a new string, as a fallback if asked to avoid built-ins."
+    ],
+    "solution": "function reverseString(str) {\n  return str.split('').reverse().join('');\n}",
+    "complexity": "Time complexity is O(n) where n is the string length; space is O(n) for the new string/array created.",
+    "variation": "Follow-up: reverse only the words in a sentence while keeping word order (e.g. \"the sky is blue\" -> \"eht yks si eulb\" vs reversing word order to \"blue is sky the\"). Ask the candidate to clarify which is meant.",
+    "explain": "I would say I am converting the string into an array of characters with split, since strings are immutable and have no in-place reverse. Then I call the built-in reverse on the array, and join it back into a string. I would mention the O(n) time and space cost, and note that for interview follow-ups I could do it with a two-pointer swap on a character array to avoid extra array allocations from split/reverse/join."
+  },
+  {
+    "id": "cp-02",
+    "title": "Character frequency counter",
+    "difficulty": "basic",
+    "functionName": "charFrequency",
+    "statement": "Write a function that takes a string and returns an object mapping each character to how many times it occurs in the string. This kind of counting utility comes up constantly in real UI work, like counting tags, votes, or event types.",
+    "examples": "Input: \"aabbc\" -> Output: { a: 2, b: 2, c: 1 }\nInput: \"\" -> Output: {}",
+    "constraints": "Treat the function as case-sensitive (uppercase and lowercase are different keys) and count every character including spaces and punctuation.",
+    "starter": "function charFrequency(str) {\n  // your code here\n}",
+    "tests": [
+      {
+        "args": [
+          "aabbc"
+        ],
+        "expected": {
+          "a": 2,
+          "b": 2,
+          "c": 1
+        },
+        "desc": "counts repeated characters"
+      },
+      {
+        "args": [
+          ""
+        ],
+        "expected": {},
+        "desc": "empty string returns empty object"
+      },
+      {
+        "args": [
+          "aaaa"
+        ],
+        "expected": {
+          "a": 4
+        },
+        "desc": "all same character"
+      },
+      {
+        "args": [
+          "ab cd"
+        ],
+        "expected": {
+          "a": 1,
+          "b": 1,
+          " ": 1,
+          "c": 1,
+          "d": 1
+        },
+        "desc": "counts the space character too"
+      },
+      {
+        "args": [
+          "AaAa"
+        ],
+        "expected": {
+          "A": 2,
+          "a": 2
+        },
+        "desc": "is case-sensitive"
+      },
+      {
+        "args": [
+          "x"
+        ],
+        "expected": {
+          "x": 1
+        },
+        "desc": "single character string"
+      }
+    ],
+    "hints": [
+      "A plain object or a Map both work as the counter store.",
+      "Use `for...of` to iterate the string by character.",
+      "Initialize missing keys with 0 using `counts[ch] || 0` before incrementing.",
+      "If asked to ignore case, lowercase the character before counting."
+    ],
+    "solution": "function charFrequency(str) {\n  const counts = {};\n  for (const ch of str) {\n    counts[ch] = (counts[ch] || 0) + 1;\n  }\n  return counts;\n}",
+    "complexity": "Time complexity is O(n) for a single pass over the string; space is O(k) where k is the number of distinct characters.",
+    "variation": "Follow-up: extend this to count word frequency in a sentence instead of characters, or to return only the character(s) with the maximum frequency.",
+    "explain": "I walk through the string once with a for-of loop, which correctly handles each character. For each character I look up its current count in an object, defaulting to 0 if it is not there yet, and increment it. This is a single linear pass, so it is O(n) time, and I would mention that using a Map avoids any prototype-pollution edge cases you could hit with plain-object keys like \"__proto__\"."
+  },
+  {
+    "id": "cp-03",
+    "title": "Remove duplicates from an array",
+    "difficulty": "basic",
+    "functionName": "removeDuplicates",
+    "statement": "Write a function that takes an array of primitive values and returns a new array with duplicate values removed, preserving the order of first occurrence.",
+    "examples": "Input: [1, 2, 2, 3, 1] -> Output: [1, 2, 3]\nInput: ['a', 'b', 'a'] -> Output: ['a', 'b']",
+    "constraints": "Assume the array contains primitives (numbers, strings, booleans). Equality should be strict (===) type-sensitive equality, so 1 and '1' are considered different values.",
+    "starter": "function removeDuplicates(arr) {\n  // your code here\n}",
+    "tests": [
+      {
+        "args": [
+          [
+            1,
+            2,
+            2,
+            3,
+            1
+          ]
+        ],
+        "expected": [
+          1,
+          2,
+          3
+        ],
+        "desc": "removes duplicate numbers, keeps first-seen order"
+      },
+      {
+        "args": [
+          []
+        ],
+        "expected": [],
+        "desc": "empty array returns empty array"
+      },
+      {
+        "args": [
+          [
+            1,
+            1,
+            1
+          ]
+        ],
+        "expected": [
+          1
+        ],
+        "desc": "all duplicates collapse to one value"
+      },
+      {
+        "args": [
+          [
+            "a",
+            "b",
+            "a",
+            "c"
+          ]
+        ],
+        "expected": [
+          "a",
+          "b",
+          "c"
+        ],
+        "desc": "works with strings"
+      },
+      {
+        "args": [
+          [
+            1,
+            "1",
+            1
+          ]
+        ],
+        "expected": [
+          1,
+          "1"
+        ],
+        "desc": "is type-sensitive, 1 and \"1\" are distinct"
+      },
+      {
+        "args": [
+          [
+            true,
+            false,
+            true
+          ]
+        ],
+        "expected": [
+          true,
+          false
+        ],
+        "desc": "works with booleans"
+      }
+    ],
+    "hints": [
+      "A Set automatically discards duplicate primitive values.",
+      "Spreading a Set back into an array gives you the deduped list.",
+      "Sets preserve insertion order, which matches the \"first occurrence\" requirement.",
+      "For objects (not just primitives) you would need a different strategy, like tracking by a key or JSON-stringifying."
+    ],
+    "solution": "function removeDuplicates(arr) {\n  return [...new Set(arr)];\n}",
+    "complexity": "Time and space complexity are both O(n), since Set insertion/lookup is average O(1) and we do it once per element.",
+    "variation": "Follow-up: dedupe an array of objects by a specific key (e.g. remove duplicate users by id), which requires tracking seen keys explicitly instead of relying on Set's reference equality.",
+    "explain": "I lean on the fact that a JavaScript Set only stores unique values under SameValueZero equality, and that it preserves insertion order, which is exactly the \"first occurrence\" ordering the problem wants. So I just build a Set from the array and spread it back into a new array. It is a clean O(n) solution, and I would flag that this only works for primitives, not objects, since objects are compared by reference in a Set."
+  },
+  {
+    "id": "cp-04",
+    "title": "Flatten a nested array (arbitrary depth)",
+    "difficulty": "basic",
+    "functionName": "flattenDeep",
+    "statement": "Write a function that takes an array which may contain nested arrays to an arbitrary depth, and returns a single flat array containing all the non-array values in order.",
+    "examples": "Input: [1, [2, 3], [4, [5, 6]]] -> Output: [1, 2, 3, 4, 5, 6]\nInput: [[[[1]]]] -> Output: [1]",
+    "constraints": "Depth is not bounded ahead of time; do not assume a fixed nesting level. Do not use Array.prototype.flat(Infinity) directly; implement the flattening logic yourself (interviewers usually want to see the recursion).",
+    "starter": "function flattenDeep(arr) {\n  // your code here\n}",
+    "tests": [
+      {
+        "args": [
+          [
+            1,
+            [
+              2,
+              3
+            ],
+            [
+              4,
+              [
+                5,
+                6
+              ]
+            ]
+          ]
+        ],
+        "expected": [
+          1,
+          2,
+          3,
+          4,
+          5,
+          6
+        ],
+        "desc": "flattens mixed-depth nesting"
+      },
+      {
+        "args": [
+          []
+        ],
+        "expected": [],
+        "desc": "empty array stays empty"
+      },
+      {
+        "args": [
+          [
+            1,
+            2,
+            3
+          ]
+        ],
+        "expected": [
+          1,
+          2,
+          3
+        ],
+        "desc": "already-flat array is unchanged"
+      },
+      {
+        "args": [
+          [
+            [
+              [
+                [
+                  1
+                ]
+              ]
+            ]
+          ]
+        ],
+        "expected": [
+          1
+        ],
+        "desc": "deeply nested single value"
+      },
+      {
+        "args": [
+          [
+            1,
+            [
+              2,
+              [
+                3,
+                [
+                  4,
+                  [
+                    5
+                  ]
+                ]
+              ]
+            ]
+          ]
+        ],
+        "expected": [
+          1,
+          2,
+          3,
+          4,
+          5
+        ],
+        "desc": "linear deep chain of nesting"
+      },
+      {
+        "args": [
+          [
+            [],
+            [],
+            []
+          ]
+        ],
+        "expected": [],
+        "desc": "nested empty arrays produce empty result"
+      }
+    ],
+    "hints": [
+      "Check Array.isArray on each element to decide whether to recurse.",
+      "reduce + concat is a common pattern: accumulate flat values, recursing into arrays.",
+      "Think about the base case: a non-array element is simply appended to the accumulator.",
+      "This can also be done iteratively with an explicit stack if recursion depth is a concern."
+    ],
+    "solution": "function flattenDeep(arr) {\n  return arr.reduce((acc, val) => {\n    return acc.concat(Array.isArray(val) ? flattenDeep(val) : val);\n  }, []);\n}",
+    "complexity": "Time complexity is O(n) where n is the total number of elements across all nesting levels; space is O(n) for the output plus O(d) recursion stack depth for nesting depth d.",
+    "variation": "Follow-up: implement flattening to a specified maximum depth only (like Array.prototype.flat(depth)), which requires passing and decrementing a depth counter instead of always recursing fully.",
+    "explain": "I walk the array with reduce, and for each element I check if it is itself an array. If it is, I recursively flatten it and concat the result; if not, I concat the value directly. Concat handles both single values and arrays being merged into the accumulator. I would mention the recursion depth equals nesting depth, so extremely deep structures could risk a stack overflow, and an iterative stack-based version would avoid that."
+  },
+  {
+    "id": "cp-05",
+    "title": "Group array of objects by a property (groupBy)",
+    "difficulty": "basic",
+    "functionName": "groupBy",
+    "statement": "Write a function that takes an array of objects and a \"key\", and groups the objects into an object whose keys are the distinct values of that property, and whose values are arrays of the matching objects. The key parameter may be a property name string, or a function that computes the group key from an item.",
+    "examples": "Input: ([{type:'fruit',name:'apple'},{type:'veg',name:'carrot'},{type:'fruit',name:'banana'}], 'type')\n-> Output: { fruit: [apple, banana items], veg: [carrot item] }",
+    "constraints": "Assume the array can be empty. The grouping key function/prop always returns a value that can be used as an object key (string or number).",
+    "starter": "function groupBy(arr, key) {\n  // your code here\n}",
+    "tests": [
+      {
+        "args": [
+          [
+            {
+              "type": "fruit",
+              "name": "apple"
+            },
+            {
+              "type": "veg",
+              "name": "carrot"
+            },
+            {
+              "type": "fruit",
+              "name": "banana"
+            }
+          ],
+          "type"
+        ],
+        "expected": {
+          "fruit": [
+            {
+              "type": "fruit",
+              "name": "apple"
+            },
+            {
+              "type": "fruit",
+              "name": "banana"
+            }
+          ],
+          "veg": [
+            {
+              "type": "veg",
+              "name": "carrot"
+            }
+          ]
+        },
+        "desc": "groups by a simple string property"
+      },
+      {
+        "args": [
+          [],
+          "type"
+        ],
+        "expected": {},
+        "desc": "empty array returns empty object"
+      },
+      {
+        "args": [
+          [
+            {
+              "age": 5
+            },
+            {
+              "age": 5
+            },
+            {
+              "age": 10
+            }
+          ],
+          "age"
+        ],
+        "expected": {
+          "5": [
+            {
+              "age": 5
+            },
+            {
+              "age": 5
+            }
+          ],
+          "10": [
+            {
+              "age": 10
+            }
+          ]
+        },
+        "desc": "groups by a numeric property (keys become strings)"
+      },
+      {
+        "args": [
+          [
+            {
+              "n": 1
+            },
+            {
+              "n": 2
+            },
+            {
+              "n": 3
+            },
+            {
+              "n": 4
+            }
+          ],
+          null
+        ],
+        "expected": {
+          "odd": [
+            {
+              "n": 1
+            },
+            {
+              "n": 3
+            }
+          ],
+          "even": [
+            {
+              "n": 2
+            },
+            {
+              "n": 4
+            }
+          ]
+        },
+        "desc": "accepts a function as the grouping key"
+      }
+    ],
+    "hints": [
+      "Support both a string key and a function key by checking `typeof key === \"function\"`.",
+      "Use reduce, building up an object where each key maps to an array.",
+      "Remember to initialize the array for a new key the first time you see it.",
+      "This is essentially what lodash's _.groupBy does; interviewers want to see you reimplement it simply."
+    ],
+    "solution": "function groupBy(arr, key) {\n  const keyFn = typeof key === 'function' ? key : (item) => item[key];\n  return arr.reduce((acc, item) => {\n    const groupKey = keyFn(item);\n    if (!acc[groupKey]) {\n      acc[groupKey] = [];\n    }\n    acc[groupKey].push(item);\n    return acc;\n  }, {});\n}",
+    "complexity": "Time complexity is O(n) for a single pass over the array; space is O(n) for the resulting grouped structure.",
+    "variation": "Follow-up: return counts instead of full arrays (a \"countBy\"), or support grouping by multiple keys at once (composite key grouping) for something like a pivot table.",
+    "explain": "I normalize the key argument into a function up front, so whether the caller passed a property name or a custom function, the rest of the logic is identical. Then I reduce over the array, computing each item's group key, lazily creating the array for that key, and pushing the item in. This is the same pattern used by lodash's groupBy and comes up often when building grouped UI sections, like grouping orders by status."
+  },
+  {
+    "id": "cp-06",
+    "title": "Sort an array of objects safely (stable, by multiple keys)",
+    "difficulty": "intermediate",
+    "functionName": "sortByKeys",
+    "statement": "Write a function that sorts an array of objects by a list of keys, in priority order, where a key can be prefixed with \"-\" to mean descending order for that key. The sort must be stable: objects that compare equal on all provided keys must retain their original relative order.",
+    "examples": "Input: ([{name:'Bob',age:30},{name:'Alice',age:25},{name:'Eve',age:30}], ['age'])\n-> Output: Alice(25), Bob(30), Eve(30) -- ties on age keep original relative order",
+    "constraints": "Do not mutate the input array. Assume V8's Array.prototype.sort is stable (true since Node 11 / modern browsers), but the solution should still work correctly even if it wasn't, since we track original index explicitly.",
+    "starter": "function sortByKeys(arr, keys) {\n  // your code here\n}",
+    "tests": [
+      {
+        "args": [
+          [
+            {
+              "name": "Bob",
+              "age": 30
+            },
+            {
+              "name": "Alice",
+              "age": 25
+            },
+            {
+              "name": "Eve",
+              "age": 30
+            }
+          ],
+          [
+            "age"
+          ]
+        ],
+        "expected": [
+          {
+            "name": "Alice",
+            "age": 25
+          },
+          {
+            "name": "Bob",
+            "age": 30
+          },
+          {
+            "name": "Eve",
+            "age": 30
+          }
+        ],
+        "desc": "sorts ascending by a single key, stable on ties"
+      },
+      {
+        "args": [
+          [
+            {
+              "name": "Bob",
+              "age": 30
+            },
+            {
+              "name": "Alice",
+              "age": 25
+            },
+            {
+              "name": "Eve",
+              "age": 30
+            }
+          ],
+          [
+            "-age",
+            "name"
+          ]
+        ],
+        "expected": [
+          {
+            "name": "Bob",
+            "age": 30
+          },
+          {
+            "name": "Eve",
+            "age": 30
+          },
+          {
+            "name": "Alice",
+            "age": 25
+          }
+        ],
+        "desc": "sorts descending by age, then ascending by name as tiebreaker"
+      },
+      {
+        "args": [
+          [],
+          [
+            "age"
+          ]
+        ],
+        "expected": [],
+        "desc": "empty array returns empty array"
+      },
+      {
+        "args": [
+          [
+            {
+              "id": 1,
+              "v": 1
+            },
+            {
+              "id": 2,
+              "v": 1
+            },
+            {
+              "id": 3,
+              "v": 1
+            }
+          ],
+          [
+            "v"
+          ]
+        ],
+        "expected": [
+          {
+            "id": 1,
+            "v": 1
+          },
+          {
+            "id": 2,
+            "v": 1
+          },
+          {
+            "id": 3,
+            "v": 1
+          }
+        ],
+        "desc": "fully tied items preserve original order"
+      },
+      {
+        "args": [
+          [
+            {
+              "a": 2,
+              "b": 1
+            },
+            {
+              "a": 1,
+              "b": 2
+            },
+            {
+              "a": 1,
+              "b": 1
+            }
+          ],
+          [
+            "a",
+            "b"
+          ]
+        ],
+        "expected": [
+          {
+            "a": 1,
+            "b": 1
+          },
+          {
+            "a": 1,
+            "b": 2
+          },
+          {
+            "a": 2,
+            "b": 1
+          }
+        ],
+        "desc": "sorts by first key then second key as tiebreaker"
+      }
+    ],
+    "hints": [
+      "Pair each item with its original index before sorting, so you can break ties by index and guarantee stability.",
+      "For each key spec, strip a leading \"-\" to detect descending order.",
+      "Loop through the keys in order inside the comparator, returning as soon as one key differentiates the two items.",
+      "If all keys tie, fall back to comparing the original indexes."
+    ],
+    "solution": "function sortByKeys(arr, keys) {\n  const withIndex = arr.map((item, index) => ({ item, index }));\n  withIndex.sort((a, b) => {\n    for (const keySpec of keys) {\n      const descending = keySpec.startsWith('-');\n      const key = descending ? keySpec.slice(1) : keySpec;\n      if (a.item[key] < b.item[key]) return descending ? 1 : -1;\n      if (a.item[key] > b.item[key]) return descending ? -1 : 1;\n    }\n    return a.index - b.index;\n  });\n  return withIndex.map((entry) => entry.item);\n}",
+    "complexity": "Time complexity is O(n log n * k) where k is the number of sort keys checked per comparison; space is O(n) for the index-tagged copy.",
+    "variation": "Follow-up: support a custom comparator per key (e.g. case-insensitive string compare, or a locale-aware compare) instead of only default relational operators.",
+    "explain": "Sorting objects safely is mostly about making the comparator deterministic and stable. I tag each item with its original array index first, so even if I ever needed to run this in an environment without a stable sort, ties fall back to comparing that original index. The comparator then walks the requested keys in priority order, checking a \"-\" prefix to flip the comparison for descending fields, and returns as soon as one key breaks the tie."
+  },
+  {
+    "id": "cp-07",
+    "title": "Deep clone an object",
+    "difficulty": "intermediate",
+    "functionName": "deepClone",
+    "statement": "Write a function that creates a deep copy of a plain JavaScript value: nested plain objects and arrays should be fully copied so that mutating the clone never affects the original, and vice versa. Discuss the tradeoffs of using structuredClone(), JSON.parse(JSON.stringify()), and a hand-written recursive clone, then implement the manual version.",
+    "examples": "Input: { a: 1, b: { c: 2 } } -> Output: a new object { a: 1, b: { c: 2 } } where output.b !== input.b",
+    "constraints": "Handle plain objects, arrays, and primitives (numbers, strings, booleans, null). You do not need to handle functions, Dates, Maps/Sets, or circular references for this version, but you should be able to discuss how you'd extend it to do so.",
+    "starter": "function deepClone(value) {\n  // your code here\n}",
+    "tests": [
+      {
+        "args": [
+          {
+            "a": 1,
+            "b": {
+              "c": 2
+            }
+          }
+        ],
+        "expected": {
+          "a": 1,
+          "b": {
+            "c": 2
+          }
+        },
+        "desc": "clones a simple nested object"
+      },
+      {
+        "args": [
+          [
+            1,
+            2,
+            [
+              3,
+              4
+            ]
+          ]
+        ],
+        "expected": [
+          1,
+          2,
+          [
+            3,
+            4
+          ]
+        ],
+        "desc": "clones a nested array"
+      },
+      {
+        "args": [
+          {}
+        ],
+        "expected": {},
+        "desc": "clones an empty object"
+      },
+      {
+        "args": [
+          []
+        ],
+        "expected": [],
+        "desc": "clones an empty array"
+      },
+      {
+        "args": [
+          {
+            "a": [
+              1,
+              {
+                "b": 2
+              }
+            ]
+          }
+        ],
+        "expected": {
+          "a": [
+            1,
+            {
+              "b": 2
+            }
+          ]
+        },
+        "desc": "clones mixed nested arrays and objects"
+      },
+      {
+        "args": [
+          null
+        ],
+        "expected": null,
+        "desc": "passes through null unchanged"
+      },
+      {
+        "args": [
+          42
+        ],
+        "expected": 42,
+        "desc": "passes through a primitive number unchanged"
+      }
+    ],
+    "hints": [
+      "JSON.parse(JSON.stringify(x)) is a quick deep clone but silently drops functions, undefined, Dates become strings, and it throws on circular references.",
+      "structuredClone(x) is a modern built-in that handles more types (Dates, Maps, Sets, circular refs) but still cannot clone functions.",
+      "For the manual version: if the value is not an object (or is null), return it as-is; otherwise create a new array or object and recursively clone each entry/property.",
+      "To fully support circular references you would need a WeakMap tracking already-cloned objects."
+    ],
+    "solution": "function deepClone(value) {\n  if (value === null || typeof value !== 'object') {\n    return value;\n  }\n  if (Array.isArray(value)) {\n    return value.map((item) => deepClone(item));\n  }\n  const result = {};\n  for (const key of Object.keys(value)) {\n    result[key] = deepClone(value[key]);\n  }\n  return result;\n}",
+    "complexity": "Time and space complexity are both O(n) where n is the total number of values in the structure, since every nested value is visited and copied exactly once.",
+    "variation": "Follow-up: extend deepClone to handle circular references (using a WeakMap of already-visited objects to their clones) and special types like Date, Map, and Set.",
+    "explain": "I would first talk through the three common approaches: JSON round-tripping is short but loses functions, undefined, and mishandles Dates/circular refs; structuredClone is built into modern JS engines and handles many more types safely, but still cannot clone functions and may not exist in very old environments; a manual recursive clone gives full control. For the manual version, I recurse: primitives and null are returned as-is, arrays are mapped recursively, and plain objects are rebuilt key by key with recursive calls on each value."
+  },
+  {
+    "id": "cp-08",
+    "title": "Deep equality check between two values",
+    "difficulty": "intermediate",
+    "functionName": "deepEqual",
+    "statement": "Write a function that takes two values and returns true if they are deeply equal: primitives compared by value, and objects/arrays compared recursively by their own enumerable keys and values, regardless of key order.",
+    "examples": "Input: ({a:1,b:2}, {a:1,b:2}) -> Output: true\nInput: ({a:1,b:2}, {a:1,b:3}) -> Output: false\nInput: ([1,2,3], [1,2,3]) -> Output: true",
+    "constraints": "Assume inputs are plain objects, arrays, or primitives (no functions, Dates, or circular references needed for this version).",
+    "starter": "function deepEqual(a, b) {\n  // your code here\n}",
+    "tests": [
+      {
+        "args": [
+          {
+            "a": 1,
+            "b": 2
+          },
+          {
+            "a": 1,
+            "b": 2
+          }
+        ],
+        "expected": true,
+        "desc": "equal flat objects"
+      },
+      {
+        "args": [
+          {
+            "a": 1,
+            "b": 2
+          },
+          {
+            "a": 1,
+            "b": 3
+          }
+        ],
+        "expected": false,
+        "desc": "differing value under same key"
+      },
+      {
+        "args": [
+          [
+            1,
+            2,
+            3
+          ],
+          [
+            1,
+            2,
+            3
+          ]
+        ],
+        "expected": true,
+        "desc": "equal arrays"
+      },
+      {
+        "args": [
+          [
+            1,
+            2,
+            3
+          ],
+          [
+            1,
+            2,
+            4
+          ]
+        ],
+        "expected": false,
+        "desc": "differing array element"
+      },
+      {
+        "args": [
+          {
+            "a": {
+              "b": 1
+            }
+          },
+          {
+            "a": {
+              "b": 1
+            }
+          }
+        ],
+        "expected": true,
+        "desc": "equal nested objects"
+      },
+      {
+        "args": [
+          {
+            "a": {
+              "b": 1
+            }
+          },
+          {
+            "a": {
+              "b": 2
+            }
+          }
+        ],
+        "expected": false,
+        "desc": "differing nested value"
+      },
+      {
+        "args": [
+          null,
+          null
+        ],
+        "expected": true,
+        "desc": "both null are equal"
+      },
+      {
+        "args": [
+          {
+            "a": 1
+          },
+          {
+            "a": 1,
+            "b": 2
+          }
+        ],
+        "expected": false,
+        "desc": "different number of keys means not equal"
+      }
+    ],
+    "hints": [
+      "Start with a fast path: if a === b, they are trivially equal (handles identical primitives and references).",
+      "If either is null or their typeof differs, they cannot be equal.",
+      "If both are non-null objects, compare Object.keys length first as a cheap short-circuit before recursing.",
+      "Recurse into each property with the same deepEqual function."
+    ],
+    "solution": "function deepEqual(a, b) {\n  if (a === b) {\n    return true;\n  }\n  if (typeof a !== typeof b || a === null || b === null || typeof a !== 'object') {\n    return false;\n  }\n  if (Array.isArray(a) !== Array.isArray(b)) {\n    return false;\n  }\n  const aKeys = Object.keys(a);\n  const bKeys = Object.keys(b);\n  if (aKeys.length !== bKeys.length) {\n    return false;\n  }\n  for (const key of aKeys) {\n    if (!Object.prototype.hasOwnProperty.call(b, key)) {\n      return false;\n    }\n    if (!deepEqual(a[key], b[key])) {\n      return false;\n    }\n  }\n  return true;\n}",
+    "complexity": "Time and space complexity are both O(n) in the worst case, where n is the total number of values across both structures, since every corresponding value pair is visited once.",
+    "variation": "Follow-up: this is essentially what React's dependency-array comparisons and libraries like lodash's isEqual do under the hood -- ask how you'd handle Dates, NaN, -0 vs 0, or Symbols as keys.",
+    "explain": "I start with a reference/primitive fast path using ===, which also correctly handles two identical object references. Then I rule out mismatched types or nulls. Once I know both are non-null objects of the same \"arrayness\", I compare their key counts as a cheap early exit, then recursively check that every key in one object exists in the other with a deeply-equal value. This mirrors how libraries like lodash implement isEqual, and it is directly relevant to understanding why React's useEffect dependency array uses shallow, not deep, comparison by default."
+  },
+  {
+    "id": "cp-09",
+    "title": "Implement Array.prototype.map from scratch",
+    "difficulty": "intermediate",
+    "functionName": "myMap",
+    "statement": "Implement your own version of Array.prototype.map as a standalone function myMap(arr, callback) that returns a new array where each element is the result of calling callback on the corresponding element of arr, with (value, index, array) passed to the callback.",
+    "examples": "Input: ([1,2,3], x => x*2) -> Output: [2,4,6]",
+    "constraints": "Do not use the native .map internally. The callback should receive (element, index, array) just like the native implementation.",
+    "starter": "function myMap(arr, callback) {\n  // your code here\n}",
+    "tests": [
+      {
+        "args": [
+          [
+            1,
+            2,
+            3
+          ],
+          null
+        ],
+        "expected": [
+          2,
+          4,
+          6
+        ],
+        "desc": "doubles every element"
+      },
+      {
+        "args": [
+          [],
+          null
+        ],
+        "expected": [],
+        "desc": "empty array returns empty array"
+      },
+      {
+        "args": [
+          [
+            1,
+            2,
+            3
+          ],
+          null
+        ],
+        "expected": [
+          1,
+          3,
+          5
+        ],
+        "desc": "callback receives the index"
+      },
+      {
+        "args": [
+          [
+            "a",
+            "b"
+          ],
+          null
+        ],
+        "expected": [
+          "A",
+          "B"
+        ],
+        "desc": "works with string transforms"
+      }
+    ],
+    "hints": [
+      "Allocate a result array of the same conceptual length as the input.",
+      "Loop with a plain for loop from 0 to arr.length, calling callback(arr[i], i, arr) each time.",
+      "Push (or index-assign) the callback result into the new array; never mutate the input.",
+      "The native map also passes the whole array as the third argument -- do the same for parity."
+    ],
+    "solution": "function myMap(arr, callback) {\n  const result = [];\n  for (let i = 0; i < arr.length; i++) {\n    result.push(callback(arr[i], i, arr));\n  }\n  return result;\n}",
+    "complexity": "Time complexity is O(n) for a single pass; space is O(n) for the new output array.",
+    "variation": "Follow-up: implement it so it also works when called as Array.prototype.myMap via a for...in-safe, sparse-array-aware loop (skipping holes in a sparse array like [1, , 3]).",
+    "explain": "I reimplement map by looping over the input array with an index, calling the provided callback with the value, index, and the original array to match the native signature, and collecting each result into a fresh array that I return, leaving the input untouched. It is a direct O(n) transformation, and the main interview signal is remembering to pass index and array to the callback and to never mutate the source array."
+  },
+  {
+    "id": "cp-10",
+    "title": "Implement Array.prototype.filter from scratch",
+    "difficulty": "intermediate",
+    "functionName": "myFilter",
+    "statement": "Implement your own version of Array.prototype.filter as a standalone function myFilter(arr, predicate) that returns a new array containing only the elements for which predicate returns a truthy value, with (value, index, array) passed to the predicate.",
+    "examples": "Input: ([1,2,3,4], x => x % 2 === 0) -> Output: [2,4]",
+    "constraints": "Do not use the native .filter internally. Preserve the relative order of the kept elements.",
+    "starter": "function myFilter(arr, predicate) {\n  // your code here\n}",
+    "tests": [
+      {
+        "args": [
+          [
+            1,
+            2,
+            3,
+            4
+          ],
+          null
+        ],
+        "expected": [
+          2,
+          4
+        ],
+        "desc": "keeps only even numbers"
+      },
+      {
+        "args": [
+          [],
+          null
+        ],
+        "expected": [],
+        "desc": "empty array returns empty array"
+      },
+      {
+        "args": [
+          [
+            1,
+            2,
+            3
+          ],
+          null
+        ],
+        "expected": [],
+        "desc": "no matches returns empty array"
+      },
+      {
+        "args": [
+          [
+            1,
+            2,
+            3
+          ],
+          null
+        ],
+        "expected": [
+          2,
+          3
+        ],
+        "desc": "predicate can use the index"
+      },
+      {
+        "args": [
+          [
+            "a",
+            "bb",
+            "ccc"
+          ],
+          null
+        ],
+        "expected": [
+          "bb",
+          "ccc"
+        ],
+        "desc": "works with string length checks"
+      }
+    ],
+    "hints": [
+      "Loop through the array once, testing predicate(arr[i], i, arr) for each element.",
+      "Only push elements into the result when the predicate returns truthy.",
+      "The relative order of kept elements should match the input order, which a simple forward loop naturally gives you.",
+      "Watch for off-by-one errors in the loop bound: i < arr.length, not <=."
+    ],
+    "solution": "function myFilter(arr, predicate) {\n  const result = [];\n  for (let i = 0; i < arr.length; i++) {\n    if (predicate(arr[i], i, arr)) {\n      result.push(arr[i]);\n    }\n  }\n  return result;\n}",
+    "complexity": "Time complexity is O(n); space is O(k) for the result where k is the number of elements that pass the predicate (worst case O(n)).",
+    "variation": "Follow-up: implement myReject as the inverse (keep elements where predicate is falsy) by reusing myFilter with a negated predicate.",
+    "explain": "This is a straightforward linear scan: for every element I call the predicate with the value, index, and array, and only append the element to the result when the predicate is truthy. I keep the original relative order automatically since I am iterating left to right and pushing in that same order. It is O(n) time and at most O(n) extra space for the output."
+  },
+  {
+    "id": "cp-11",
+    "title": "Implement Array.prototype.reduce from scratch",
+    "difficulty": "intermediate",
+    "functionName": "myReduce",
+    "statement": "Implement your own version of Array.prototype.reduce as a standalone function myReduce(arr, callback, initialValue). If initialValue is provided, it should be used as the starting accumulator; if it is omitted, the first array element should be used as the initial accumulator and iteration should start from the second element, matching native reduce semantics.",
+    "examples": "Input: ([1,2,3,4], (acc,x) => acc+x, 0) -> Output: 10\nInput: ([1,2,3,4], (acc,x) => acc+x) -> Output: 10 (no initial value, starts from arr[0])",
+    "constraints": "Do not use the native .reduce internally. You can detect whether initialValue was actually passed by checking arguments.length inside a function declaration (arrow functions don't have their own arguments object, which is why this must be a function declaration).",
+    "starter": "function myReduce(arr, callback, initialValue) {\n  // your code here\n}",
+    "tests": [
+      {
+        "args": [
+          [
+            1,
+            2,
+            3,
+            4
+          ],
+          null,
+          0
+        ],
+        "expected": 10,
+        "desc": "sums with an explicit initial value"
+      },
+      {
+        "args": [
+          [
+            1,
+            2,
+            3,
+            4
+          ],
+          null
+        ],
+        "expected": 10,
+        "desc": "sums with no initial value, starting from the first element"
+      },
+      {
+        "args": [
+          [],
+          null,
+          5
+        ],
+        "expected": 5,
+        "desc": "empty array with initial value returns that initial value"
+      },
+      {
+        "args": [
+          [
+            1,
+            2,
+            3
+          ],
+          null,
+          1
+        ],
+        "expected": 6,
+        "desc": "computes a product"
+      },
+      {
+        "args": [
+          [
+            "a",
+            "b",
+            "c"
+          ],
+          null,
+          ""
+        ],
+        "expected": "abc",
+        "desc": "works with string concatenation"
+      }
+    ],
+    "hints": [
+      "Use a regular `function` declaration (not an arrow function) so you have access to the `arguments` object.",
+      "Check `arguments.length < 3` to detect that initialValue was not passed.",
+      "If there is no initial value, seed the accumulator with arr[0] and start the loop from index 1.",
+      "The native reduce throws on an empty array with no initial value -- you can mention that edge case even if the tests do not exercise it."
+    ],
+    "solution": "function myReduce(arr, callback, initialValue) {\n  let accumulator = initialValue;\n  let startIndex = 0;\n  if (arguments.length < 3) {\n    accumulator = arr[0];\n    startIndex = 1;\n  }\n  for (let i = startIndex; i < arr.length; i++) {\n    accumulator = callback(accumulator, arr[i], i, arr);\n  }\n  return accumulator;\n}",
+    "complexity": "Time complexity is O(n); space is O(1) beyond the accumulator, aside from whatever the callback itself allocates.",
+    "variation": "Follow-up: implement myMap and myFilter in terms of myReduce, to show you understand that reduce is the most general of the three array iteration methods.",
+    "explain": "The trickiest part of reduce is the two-argument-count behavior, so I use a plain function declaration to get access to arguments.length and detect whether the caller actually passed an initial value. If not, I seed the accumulator from the first element and start iterating from index 1; otherwise I start from index 0 with the given initial value. From there it's a simple loop applying the callback and carrying the accumulator forward."
+  },
+  {
+    "id": "cp-12",
+    "title": "Implement debounce",
+    "difficulty": "intermediate",
+    "functionName": "debounce",
+    "statement": "Write a function debounce(fn, delay) that returns a new \"debounced\" version of fn. The debounced function should delay invoking fn until delay milliseconds have elapsed since the last time the debounced function was called. If it's called again before that time elapses, the previous pending invocation is cancelled and the timer restarts. This is the classic pattern used for search-as-you-type inputs and resize handlers.",
+    "examples": "Input: debounced = debounce(fn, 20); debounced(1); debounced(2); debounced(3);\n-> only one call to fn actually fires, with the arguments from the last call, 20ms after the last call.",
+    "constraints": "Use setTimeout/clearTimeout. Arguments passed to the debounced function must be forwarded to the underlying fn on the eventual call. This function must be tested with real (short) timers since it is inherently time-based.",
+    "starter": "function debounce(fn, delay) {\n  // your code here\n}",
+    "tests": [
+      {
+        "custom": "(fn) => new Promise((resolve) => {\n  const calls = [];\n  const debounced = fn((x) => calls.push(x), 20);\n  debounced(1);\n  debounced(2);\n  debounced(3);\n  setTimeout(() => {\n    if (calls.length === 1 && calls[0] === 3) {\n      resolve(true);\n    } else {\n      resolve('expected exactly one call with the last argument (3), got ' + JSON.stringify(calls));\n    }\n  }, 60);\n})",
+        "desc": "async: rapid calls collapse into a single call with the last arguments"
+      },
+      {
+        "custom": "(fn) => new Promise((resolve) => {\n  let called = false;\n  const debounced = fn(() => { called = true; }, 30);\n  debounced();\n  if (called) {\n    resolve('expected the wrapped function not to fire synchronously');\n    return;\n  }\n  setTimeout(() => {\n    resolve(called ? true : 'expected the debounced function to eventually fire');\n  }, 60);\n})",
+        "desc": "async: execution is delayed, not synchronous"
+      },
+      {
+        "custom": "(fn) => new Promise((resolve) => {\n  let received = null;\n  const debounced = fn((a, b) => { received = a + b; }, 10);\n  debounced(2, 3);\n  setTimeout(() => {\n    resolve(received === 5 ? true : 'expected arguments to be forwarded, got ' + received);\n  }, 30);\n})",
+        "desc": "async: forwards arguments through to the wrapped function"
+      },
+      {
+        "custom": "(fn) => new Promise((resolve) => {\n  let count = 0;\n  const debounced = fn(() => { count++; }, 15);\n  debounced();\n  setTimeout(() => {\n    debounced();\n    setTimeout(() => {\n      resolve(count === 2 ? true : 'expected two separate calls to fire after waiting between them, got ' + count);\n    }, 30);\n  }, 30);\n})",
+        "desc": "async: separate call bursts (with a gap larger than delay) each fire independently"
+      },
+      {
+        "custom": "(fn) => new Promise((resolve) => {\n  let count = 0;\n  const debounced = fn(() => { count++; }, 10);\n  for (let i = 0; i < 5; i++) {\n    debounced();\n  }\n  setTimeout(() => resolve(count === 1 ? true : 'expected exactly one call after a burst, got ' + count), 40);\n})",
+        "desc": "async: a burst of many rapid calls still results in exactly one invocation"
+      }
+    ],
+    "hints": [
+      "Keep a single timeoutId variable in the closure returned by debounce.",
+      "Every time the debounced function is called, clearTimeout the previous pending timer before scheduling a new one.",
+      "Use `...args` and `fn.apply(this, args)` (or an arrow function capturing args) so all arguments and `this` are forwarded.",
+      "Remember debounce delays until things go quiet -- it never fires early, unlike throttle."
+    ],
+    "solution": "function debounce(fn, delay) {\n  let timeoutId;\n  return function (...args) {\n    clearTimeout(timeoutId);\n    timeoutId = setTimeout(() => {\n      fn.apply(this, args);\n    }, delay);\n  };\n}",
+    "complexity": "Each call is O(1) (just resetting a timer); over n calls in a burst it's O(n) total work but only ever one pending timer and one eventual invocation.",
+    "variation": "Follow-up: add a \"leading\" option so the first call in a burst fires immediately and trailing calls are debounced as before (similar to lodash's { leading: true } debounce option).",
+    "explain": "A debounced wrapper keeps a single timer id in its closure. Every call clears whatever timer was pending and starts a new one for the given delay, forwarding that call's arguments. Because each new call cancels the previous timer, only the last call in a rapid burst actually survives long enough to fire fn. This is exactly what you want for a search box, where you don't want to hit the network on every keystroke, only once typing pauses."
+  },
+  {
+    "id": "cp-13",
+    "title": "Implement throttle",
+    "difficulty": "intermediate",
+    "functionName": "throttle",
+    "statement": "Write a function throttle(fn, interval) that returns a new \"throttled\" version of fn. The first call should invoke fn immediately; any further calls within the following interval milliseconds should be ignored. Once interval milliseconds have passed since the last invocation, the next call is allowed to fire immediately again. This is the leading-edge throttle pattern used for scroll/resize handlers and rate-limited button clicks.",
+    "examples": "Input: throttled = throttle(fn, 50); throttled(); throttled(); throttled();\n-> only the first call fires immediately; the next two (within 50ms) are dropped.",
+    "constraints": "Use Date.now() to track the last invocation time. Arguments passed to the throttled function must be forwarded to fn when it does fire.",
+    "starter": "function throttle(fn, interval) {\n  // your code here\n}",
+    "tests": [
+      {
+        "custom": "(fn) => {\n  let count = 0;\n  const throttled = fn(() => count++, 50);\n  throttled();\n  return count === 1 ? true : 'expected the first call to fire immediately, got count=' + count;\n}",
+        "desc": "first call fires immediately"
+      },
+      {
+        "custom": "(fn) => {\n  let count = 0;\n  const throttled = fn(() => count++, 100);\n  throttled();\n  throttled();\n  throttled();\n  return count === 1 ? true : 'expected calls within the interval to be ignored, got count=' + count;\n}",
+        "desc": "rapid subsequent calls within the interval are ignored"
+      },
+      {
+        "custom": "(fn) => new Promise((resolve) => {\n  let count = 0;\n  const throttled = fn(() => count++, 30);\n  throttled();\n  setTimeout(() => {\n    throttled();\n    resolve(count === 2 ? true : 'expected a call after the interval elapsed to fire again, got count=' + count);\n  }, 50);\n})",
+        "desc": "async: a call after the interval has elapsed fires again"
+      },
+      {
+        "custom": "(fn) => {\n  let received;\n  const throttled = fn((a, b) => { received = a + b; }, 50);\n  throttled(2, 3);\n  return received === 5 ? true : 'expected arguments to be forwarded on the leading call, got ' + received;\n}",
+        "desc": "forwards arguments on the invocation that fires"
+      }
+    ],
+    "hints": [
+      "Track lastCallTime (initialized to 0) in the closure.",
+      "On each call, compare Date.now() - lastCallTime against interval.",
+      "If enough time has passed, update lastCallTime and invoke fn immediately; otherwise do nothing.",
+      "This is the simpler \"leading edge only, drop the rest\" throttle -- mention that a fuller version can also schedule a trailing call so the very last attempted call during the cooldown still eventually fires."
+    ],
+    "solution": "function throttle(fn, interval) {\n  let lastCallTime = 0;\n  return function (...args) {\n    const now = Date.now();\n    if (now - lastCallTime >= interval) {\n      lastCallTime = now;\n      return fn.apply(this, args);\n    }\n  };\n}",
+    "complexity": "Each call is O(1); over n calls in a window, at most floor(windowDuration / interval) + 1 calls actually invoke fn.",
+    "variation": "Follow-up: add trailing-edge behavior so that if calls keep arriving during the cooldown, the last one is still executed once the interval ends (a combination of throttle and debounce), and discuss when leading vs trailing vs both matters (e.g. analytics \"beacon\" calls vs UI feedback).",
+    "explain": "Throttle differs from debounce in that it guarantees a steady cadence of executions rather than waiting for silence. I keep a lastCallTime timestamp, and on each invocation I check how much time has passed since that timestamp. If it's at least the interval, I update the timestamp and call fn right away; otherwise the call is simply dropped. This gives an immediate first response and a hard rate limit afterward, which is what you want for things like scroll-position tracking where you want frequent-but-bounded updates."
+  },
+  {
+    "id": "cp-14",
+    "title": "Implement memoize",
+    "difficulty": "intermediate",
+    "functionName": "memoize",
+    "statement": "Write a function memoize(fn) that returns a new function which caches the result of calling fn for a given set of arguments, so that calling the memoized function again with the same arguments returns the cached result instead of recomputing it.",
+    "examples": "Input: memoized = memoize(expensiveFn); memoized(5); memoized(5);\n-> expensiveFn is only actually invoked once; the second call returns the cached value.",
+    "constraints": "Assume arguments are JSON-serializable (numbers, strings, plain objects/arrays) so a simple key like JSON.stringify(args) is an acceptable cache key strategy. Support functions of any arity (any number of arguments).",
+    "starter": "function memoize(fn) {\n  // your code here\n}",
+    "tests": [
+      {
+        "custom": "(fn) => {\n  let calls = 0;\n  const memoized = fn((x) => { calls++; return x * 2; });\n  const r1 = memoized(5);\n  const r2 = memoized(5);\n  return (r1 === 10 && r2 === 10 && calls === 1) ? true : 'expected a cached result computed only once, got calls=' + calls + ' r1=' + r1 + ' r2=' + r2;\n}",
+        "desc": "caches result for repeated identical calls"
+      },
+      {
+        "custom": "(fn) => {\n  let calls = 0;\n  const memoized = fn((x) => { calls++; return x * x; });\n  memoized(2);\n  memoized(3);\n  memoized(2);\n  return calls === 2 ? true : 'expected 2 underlying calls for 2 distinct argument values, got ' + calls;\n}",
+        "desc": "different arguments produce separate cache entries"
+      },
+      {
+        "custom": "(fn) => {\n  let calls = 0;\n  const memoized = fn((a, b) => { calls++; return a + b; });\n  const r1 = memoized(1, 2);\n  const r2 = memoized(1, 2);\n  return (r1 === 3 && r2 === 3 && calls === 1) ? true : 'expected memoized behavior for multi-argument calls';\n}",
+        "desc": "works correctly with multiple arguments"
+      },
+      {
+        "custom": "(fn) => {\n  const memoized = fn((x) => x + 1);\n  return memoized(10) === 11 ? true : 'expected memoized(10) to return 11';\n}",
+        "desc": "returns the correct value on the first (uncached) call"
+      }
+    ],
+    "hints": [
+      "A Map (or plain object) keyed by a stringified version of the arguments works as the cache.",
+      "JSON.stringify(args) is a simple, good-enough key for plain-data arguments.",
+      "Check the cache before calling fn; only call fn and store the result on a cache miss.",
+      "Discuss the limitation: JSON.stringify cannot distinguish functions/undefined/circular structures as keys, and cache growth is unbounded unless you add eviction (like an LRU)."
+    ],
+    "solution": "function memoize(fn) {\n  const cache = new Map();\n  return function (...args) {\n    const key = JSON.stringify(args);\n    if (cache.has(key)) {\n      return cache.get(key);\n    }\n    const result = fn.apply(this, args);\n    cache.set(key, result);\n    return result;\n  };\n}",
+    "complexity": "A cache hit is O(1) (amortized) lookup cost; a cache miss costs whatever fn itself costs plus O(1) to store. Space is O(u) where u is the number of unique argument combinations seen.",
+    "variation": "Follow-up: bound the cache size using an LRU eviction policy (reuse the LRU cache from another problem) so memoize doesn't leak memory in a long-running app, or key the cache by reference identity instead of JSON for non-serializable arguments.",
+    "explain": "I wrap fn in a closure holding a Map cache. On each call I build a cache key by JSON-stringifying the arguments, check whether that key is already in the cache, and if so return the cached value without calling fn again. On a miss, I call fn, store the result under that key, and return it. I'd flag that JSON.stringify as a key strategy breaks down for non-serializable arguments like functions, and that an unbounded cache can leak memory, which is where an LRU cache becomes relevant."
+  },
+  {
+    "id": "cp-15",
+    "title": "Implement a curry function",
+    "difficulty": "intermediate",
+    "functionName": "curry",
+    "statement": "Write a function curry(fn) that transforms a function of fixed arity into a curried version: it can be called with all its arguments at once, or with them split across multiple calls, one or more at a time, only actually invoking the original fn once enough arguments have been collected.",
+    "examples": "Input: const add = (a,b,c) => a+b+c; const curried = curry(add);\ncurried(1,2,3) === 6\ncurried(1)(2)(3) === 6\ncurried(1,2)(3) === 6",
+    "constraints": "Use fn.length to know how many arguments are expected (assume fn has no default/rest parameters, so fn.length is accurate).",
+    "starter": "function curry(fn) {\n  // your code here\n}",
+    "tests": [
+      {
+        "custom": "(fn) => {\n  const add = (a, b, c) => a + b + c;\n  const curried = fn(add);\n  return curried(1, 2, 3) === 6 ? true : 'expected 6 when calling with all arguments at once';\n}",
+        "desc": "works when called with all arguments at once"
+      },
+      {
+        "custom": "(fn) => {\n  const add = (a, b, c) => a + b + c;\n  const curried = fn(add);\n  return curried(1)(2)(3) === 6 ? true : 'expected 6 when calling one argument at a time';\n}",
+        "desc": "works when called one argument at a time"
+      },
+      {
+        "custom": "(fn) => {\n  const add = (a, b, c) => a + b + c;\n  const curried = fn(add);\n  return curried(1, 2)(3) === 6 ? true : 'expected 6 when calling with partial argument groups';\n}",
+        "desc": "works with partial argument groups"
+      },
+      {
+        "custom": "(fn) => {\n  const multiply = (a, b) => a * b;\n  const curried = fn(multiply);\n  return curried(4)(5) === 20 ? true : 'expected 20 for a 2-argument curried function';\n}",
+        "desc": "works for functions with a different arity"
+      }
+    ],
+    "hints": [
+      "fn.length tells you how many parameters the original function declares.",
+      "Return an inner function that accumulates arguments across calls (e.g. via closures or Function.prototype.bind).",
+      "If accumulated arguments.length >= fn.length, call fn with everything collected so far; otherwise return another function waiting for more arguments.",
+      "concat is a clean way to merge previously collected args with newly passed args between calls."
+    ],
+    "solution": "function curry(fn) {\n  return function curried(...args) {\n    if (args.length >= fn.length) {\n      return fn.apply(this, args);\n    }\n    return (...moreArgs) => curried.apply(this, args.concat(moreArgs));\n  };\n}",
+    "complexity": "Time complexity is O(n) in the number of total arguments collected across calls; space is O(n) for accumulating arguments in each intermediate closure.",
+    "variation": "Follow-up: implement a curry that also supports placeholder arguments (like lodash's _ placeholder) to skip an argument position and fill it in on a later call.",
+    "explain": "Currying is about deferring execution until enough arguments have arrived. I use fn.length to know the target arity, and an inner recursive \"curried\" function that keeps concatenating newly passed arguments onto what's already been collected. Once the accumulated count reaches the target arity, I invoke the original function with everything gathered; otherwise I return a new function that continues collecting. This lets the same curried function be called with all arguments at once or spread across several calls."
+  },
+  {
+    "id": "cp-16",
+    "title": "Implement Promise.all",
+    "difficulty": "senior",
+    "functionName": "promiseAll",
+    "statement": "Implement your own version of Promise.all as promiseAll(promises): given an array of promises (or plain values), return a single promise that resolves with an array of all resolved values in the same order as the input, once every input has resolved. If any input rejects, the returned promise should reject immediately with that same reason.",
+    "examples": "Input: [Promise.resolve(1), Promise.resolve(2)] -> resolves to [1, 2]\nInput: [Promise.resolve(1), Promise.reject('err')] -> rejects with 'err'",
+    "constraints": "Non-promise values in the array should be treated as already-resolved values (use Promise.resolve to normalize them). An empty array should resolve immediately to an empty array.",
+    "starter": "function promiseAll(promises) {\n  // your code here\n}",
+    "tests": [
+      {
+        "custom": "(fn) => fn([Promise.resolve(1), Promise.resolve(2), Promise.resolve(3)]).then((results) => {\n  return JSON.stringify(results) === JSON.stringify([1, 2, 3]) ? true : 'expected [1,2,3], got ' + JSON.stringify(results);\n})",
+        "desc": "async: resolves with results in the same order as the input"
+      },
+      {
+        "custom": "(fn) => fn([1, Promise.resolve(2), 3]).then((results) => {\n  return JSON.stringify(results) === JSON.stringify([1, 2, 3]) ? true : 'expected [1,2,3] for mixed values/promises, got ' + JSON.stringify(results);\n})",
+        "desc": "async: treats plain (non-promise) values as already resolved"
+      },
+      {
+        "custom": "(fn) => fn([Promise.resolve(1), Promise.reject('boom'), Promise.resolve(3)])\n  .then(() => 'expected the combined promise to reject, but it resolved')\n  .catch((err) => err === 'boom' ? true : 'expected rejection reason \"boom\", got ' + err)",
+        "desc": "async: rejects with the reason of the first rejecting promise"
+      },
+      {
+        "custom": "(fn) => fn([]).then((results) => Array.isArray(results) && results.length === 0 ? true : 'expected an empty array for empty input')",
+        "desc": "async: an empty input array resolves to an empty array"
+      },
+      {
+        "custom": "(fn) => {\n  const slow = new Promise((resolve) => setTimeout(() => resolve('slow'), 30));\n  const fast = Promise.resolve('fast');\n  return fn([slow, fast]).then((results) => {\n    return JSON.stringify(results) === JSON.stringify(['slow', 'fast']) ? true : 'expected order preserved regardless of resolution timing, got ' + JSON.stringify(results);\n  });\n}",
+        "desc": "async: preserves input order even when a later promise resolves before an earlier one"
+      }
+    ],
+    "hints": [
+      "Wrap the whole thing in `new Promise((resolve, reject) => { ... })`.",
+      "Normalize each entry with Promise.resolve(item) so plain values work too.",
+      "Track a results array (pre-sized) and a completed counter; write each resolved value at its own index so order is preserved regardless of completion order.",
+      "Reject immediately (and only once) as soon as any promise rejects -- don't wait for the others."
+    ],
+    "solution": "function promiseAll(promises) {\n  return new Promise((resolve, reject) => {\n    if (promises.length === 0) {\n      resolve([]);\n      return;\n    }\n    const results = new Array(promises.length);\n    let completedCount = 0;\n    promises.forEach((item, index) => {\n      Promise.resolve(item)\n        .then((value) => {\n          results[index] = value;\n          completedCount++;\n          if (completedCount === promises.length) {\n            resolve(results);\n          }\n        })\n        .catch(reject);\n    });\n  });\n}",
+    "complexity": "Time complexity is O(n) to set up and track n promises; the wall-clock time is bounded by the slowest input promise, since all promises run concurrently.",
+    "variation": "Follow-up: implement Promise.allSettled (never rejects, returns an array of {status, value|reason} for every input) or Promise.race (settles as soon as the first input settles, in either direction).",
+    "explain": "I create a new outer promise and kick off every input concurrently by mapping each one through Promise.resolve, so plain values are handled uniformly with real promises. Each one writes its resolved value into a pre-allocated results array at its own original index -- that index write is what guarantees order is preserved even if a later item resolves before an earlier one. A counter tracks how many have completed, and once it reaches the total I resolve the outer promise with the full results array; any single rejection immediately rejects the outer promise via .catch(reject)."
+  },
+  {
+    "id": "cp-17",
+    "title": "Retry an async request with backoff",
+    "difficulty": "senior",
+    "functionName": "retryWithBackoff",
+    "statement": "Write a function retryWithBackoff(fn, retries, delay) where fn is a function returning a promise (e.g. a network request). If fn's promise rejects, retry calling fn again after waiting delay milliseconds, doubling the delay each subsequent retry (exponential backoff), up to retries additional attempts. If all attempts fail, the returned promise should reject with the last error.",
+    "examples": "Input: retryWithBackoff(flakyRequest, 3, 100)\n-> tries flakyRequest, and on failure waits 100ms then retries, then 200ms, then 400ms, for up to 3 retries after the first attempt (4 attempts total) before giving up.",
+    "constraints": "fn takes no arguments and returns a promise. retries is the number of additional attempts after the first (so retries=0 means try once, no retries).",
+    "starter": "function retryWithBackoff(fn, retries, delay) {\n  // your code here\n}",
+    "tests": [
+      {
+        "custom": "(fn) => {\n  let attempts = 0;\n  const task = () => new Promise((resolve, reject) => {\n    attempts++;\n    if (attempts < 3) {\n      reject(new Error('fail attempt ' + attempts));\n    } else {\n      resolve('success');\n    }\n  });\n  return fn(task, 5, 5).then((result) => {\n    return (result === 'success' && attempts === 3) ? true : 'expected success after 3 total attempts, got attempts=' + attempts + ' result=' + result;\n  });\n}",
+        "desc": "async: eventually succeeds after a couple of failures, without exhausting all retries"
+      },
+      {
+        "custom": "(fn) => {\n  let attempts = 0;\n  const task = () => new Promise((resolve, reject) => {\n    attempts++;\n    reject(new Error('always fails'));\n  });\n  return fn(task, 2, 5)\n    .then(() => 'expected the retried call to eventually reject')\n    .catch(() => attempts === 3 ? true : 'expected 1 initial attempt + 2 retries = 3 total attempts, got ' + attempts);\n}",
+        "desc": "async: exhausts all retries and rejects after the last attempt"
+      },
+      {
+        "custom": "(fn) => {\n  let attempts = 0;\n  const task = () => new Promise((resolve) => {\n    attempts++;\n    resolve('ok');\n  });\n  return fn(task, 3, 5).then((result) => {\n    return (result === 'ok' && attempts === 1) ? true : 'expected a single attempt when the first call succeeds, got attempts=' + attempts;\n  });\n}",
+        "desc": "async: succeeds on the first try without any retrying"
+      },
+      {
+        "custom": "(fn) => {\n  const start = Date.now();\n  let attempts = 0;\n  const task = () => new Promise((resolve, reject) => {\n    attempts++;\n    reject(new Error('nope'));\n  });\n  return fn(task, 1, 20)\n    .then(() => 'expected rejection after exhausting retries')\n    .catch(() => {\n      const elapsed = Date.now() - start;\n      return (attempts === 2 && elapsed >= 20) ? true : 'expected exactly 2 attempts with a real delay between them, got attempts=' + attempts + ' elapsed=' + elapsed;\n    });\n}",
+        "desc": "async: waits at least the initial delay before the single retry fires"
+      }
+    ],
+    "hints": [
+      "Wrap the whole retry loop in a new Promise so callers can await/then a single promise.",
+      "On failure, check if any retries remain; if not, reject with that error.",
+      "If retries remain, use setTimeout(..., currentDelay) before trying again, and double currentDelay for the next round (exponential backoff).",
+      "A small recursive \"attempt(remainingRetries, currentDelay)\" inner function is easier to reason about than a loop with async waits."
+    ],
+    "solution": "function retryWithBackoff(fn, retries, delay) {\n  return new Promise((resolve, reject) => {\n    function attempt(remainingRetries, currentDelay) {\n      fn()\n        .then(resolve)\n        .catch((error) => {\n          if (remainingRetries <= 0) {\n            reject(error);\n            return;\n          }\n          setTimeout(() => {\n            attempt(remainingRetries - 1, currentDelay * 2);\n          }, currentDelay);\n        });\n    }\n    attempt(retries, delay);\n  });\n}",
+    "complexity": "Worst-case time is roughly O(delay * 2^retries) of wall-clock waiting due to the doubling backoff; the number of fn calls is O(retries).",
+    "variation": "Follow-up: add a maximum total timeout across all retries, or add jitter (a small random offset added to each delay) to avoid many clients retrying in lockstep against the same backend (the \"thundering herd\" problem).",
+    "explain": "I model this as a small recursive attempt function closed over the remaining retry budget and the current delay. Each attempt calls fn; on success it resolves the outer promise directly. On failure, if there's no retry budget left it rejects with that error, otherwise it schedules another attempt after currentDelay milliseconds and doubles the delay for next time, which is the exponential backoff. I'd mention that in production you'd usually add jitter to the delay so many clients don't all retry at exactly the same moments."
+  },
+  {
+    "id": "cp-18",
+    "title": "Run promises sequentially (in order, one after another)",
+    "difficulty": "senior",
+    "functionName": "runSequential",
+    "statement": "Write a function runSequential(taskFns) where taskFns is an array of zero-argument functions that each return a promise. Execute them strictly one after another (the next task must not start until the previous one has resolved), and return a single promise that resolves with an array of all the results, in order.",
+    "examples": "Input: [taskA, taskB, taskC] (each returning a promise) -> taskB does not start until taskA resolves, taskC does not start until taskB resolves; resolves with [resultA, resultB, resultC].",
+    "constraints": "If any task rejects, stop running further tasks and reject the overall promise with that error immediately.",
+    "starter": "function runSequential(taskFns) {\n  // your code here\n}",
+    "tests": [
+      {
+        "custom": "(fn) => {\n  const executionOrder = [];\n  const makeTask = (id, ms) => () => new Promise((resolve) => {\n    setTimeout(() => { executionOrder.push(id); resolve(id); }, ms);\n  });\n  const tasks = [makeTask('a', 30), makeTask('b', 10), makeTask('c', 5)];\n  return fn(tasks).then((results) => {\n    const orderOk = JSON.stringify(executionOrder) === JSON.stringify(['a', 'b', 'c']);\n    const resultsOk = JSON.stringify(results) === JSON.stringify(['a', 'b', 'c']);\n    return (orderOk && resultsOk) ? true : 'expected strictly sequential order [a,b,c] despite shorter delays later, got order=' + JSON.stringify(executionOrder) + ' results=' + JSON.stringify(results);\n  });\n}",
+        "desc": "async: later, faster tasks still wait for earlier, slower ones to finish"
+      },
+      {
+        "custom": "(fn) => fn([]).then((results) => Array.isArray(results) && results.length === 0 ? true : 'expected an empty array for an empty task list')",
+        "desc": "async: an empty task list resolves to an empty array"
+      },
+      {
+        "custom": "(fn) => {\n  let ranThirdTask = false;\n  const tasks = [\n    () => Promise.resolve(1),\n    () => Promise.reject('boom'),\n    () => { ranThirdTask = true; return Promise.resolve(3); }\n  ];\n  return fn(tasks)\n    .then(() => 'expected the sequence to reject when a task fails')\n    .catch((err) => (err === 'boom' && !ranThirdTask) ? true : 'expected rejection to stop remaining tasks from running');\n}",
+        "desc": "async: a rejection stops execution and later tasks never run"
+      },
+      {
+        "custom": "(fn) => {\n  let callCount = 0;\n  const tasks = [\n    () => { callCount++; return Promise.resolve('only'); }\n  ];\n  return fn(tasks).then((results) => {\n    return (callCount === 1 && JSON.stringify(results) === JSON.stringify(['only'])) ? true : 'expected a single task to run once and return its result, got callCount=' + callCount + ' results=' + JSON.stringify(results);\n  });\n}",
+        "desc": "async: a single-task list runs and resolves correctly"
+      }
+    ],
+    "hints": [
+      "Array.prototype.reduce is a natural fit: chain each task's .then onto an accumulating promise.",
+      "Start the chain with Promise.resolve([]) as the initial accumulated-results promise.",
+      "In each reduce step, wait for the running chain, then call the next taskFn, push its result, and return the results array for the next step.",
+      "Because each step's .then only runs after the previous promise settles, this naturally enforces strict sequencing without needing async/await (though async/await with a for-loop is an equally valid, arguably clearer, alternative)."
+    ],
+    "solution": "function runSequential(taskFns) {\n  return taskFns.reduce((chain, taskFn) => {\n    return chain.then((results) => {\n      return taskFn().then((value) => {\n        results.push(value);\n        return results;\n      });\n    });\n  }, Promise.resolve([]));\n}",
+    "complexity": "Time is O(n) task invocations, but wall-clock time is the sum of every task's duration since they run one at a time (no concurrency).",
+    "variation": "Follow-up: rewrite this using async/await with a plain for-loop instead of reduce, and discuss which reads more clearly to a reviewer -- then compare to the concurrency-limited runner problem, where tasks run in parallel instead of strictly in sequence.",
+    "explain": "I fold the array of task-producing functions into a single promise chain using reduce, where each step's job is to wait for everything before it, then invoke the next task and append its result. Because each .then callback only fires after the prior promise resolves, this guarantees tasks execute strictly one after another rather than concurrently, even if a later task would individually resolve faster. Any rejection anywhere in the chain short-circuits the rest, since a rejected promise skips subsequent .then handlers until a .catch."
+  },
+  {
+    "id": "cp-19",
+    "title": "Concurrency-limited task runner (max concurrency limit)",
+    "difficulty": "senior",
+    "functionName": "runWithConcurrencyLimit",
+    "statement": "Write a function runWithConcurrencyLimit(taskFns, limit) where taskFns is an array of zero-argument functions each returning a promise. Run the tasks with at most limit running concurrently at any time; as soon as one finishes, start the next queued one. Return a promise that resolves with an array of all results in the same order as the input taskFns (not necessarily completion order).",
+    "examples": "Input: (5 tasks, limit=2) -> at most 2 tasks are ever in-flight simultaneously; results come back in the original task order once everything settles.",
+    "constraints": "If any task rejects, reject the overall promise with that error (you do not need to cancel already-in-flight tasks for this version, just stop starting new ones and reject promptly).",
+    "starter": "function runWithConcurrencyLimit(taskFns, limit) {\n  // your code here\n}",
+    "tests": [
+      {
+        "custom": "(fn) => {\n  let active = 0;\n  let maxActive = 0;\n  const makeTask = (id, ms) => () => new Promise((resolve) => {\n    active++;\n    maxActive = Math.max(maxActive, active);\n    setTimeout(() => { active--; resolve(id); }, ms);\n  });\n  const tasks = [makeTask(1, 20), makeTask(2, 20), makeTask(3, 20), makeTask(4, 20), makeTask(5, 20)];\n  return fn(tasks, 2).then((results) => {\n    const orderOk = JSON.stringify(results) === JSON.stringify([1, 2, 3, 4, 5]);\n    return (maxActive <= 2 && orderOk) ? true : 'expected max 2 concurrent tasks and order-preserved results, got maxActive=' + maxActive + ' results=' + JSON.stringify(results);\n  });\n}",
+        "desc": "async: never exceeds the concurrency limit, and preserves original result order"
+      },
+      {
+        "custom": "(fn) => fn([], 3).then((results) => Array.isArray(results) && results.length === 0 ? true : 'expected an empty array for an empty task list')",
+        "desc": "async: an empty task list resolves to an empty array"
+      },
+      {
+        "custom": "(fn) => {\n  const tasks = [() => Promise.resolve('a'), () => Promise.resolve('b')];\n  return fn(tasks, 10).then((results) => {\n    return JSON.stringify(results) === JSON.stringify(['a', 'b']) ? true : 'expected [a,b] when limit exceeds task count, got ' + JSON.stringify(results);\n  });\n}",
+        "desc": "async: works correctly when the limit is greater than the number of tasks"
+      },
+      {
+        "custom": "(fn) => {\n  const tasks = [() => Promise.resolve(1), () => Promise.reject('fail'), () => Promise.resolve(3)];\n  return fn(tasks, 2)\n    .then(() => 'expected the runner to reject when a task fails')\n    .catch((err) => err === 'fail' ? true : 'expected rejection reason \"fail\", got ' + err);\n}",
+        "desc": "async: rejects if any task rejects"
+      }
+    ],
+    "hints": [
+      "Keep a \"next index to start\" pointer and a \"completed count\"; start by launching `limit` tasks (or fewer, if there aren't that many).",
+      "Whenever a running task settles, immediately try to start the next not-yet-started task, if any remain.",
+      "Write each result into a pre-allocated results array at its own original index, so final ordering matches the input regardless of completion order.",
+      "Resolve the overall promise once completedCount reaches taskFns.length; reject immediately (and only once) on any failure."
+    ],
+    "solution": "function runWithConcurrencyLimit(taskFns, limit) {\n  return new Promise((resolve, reject) => {\n    if (taskFns.length === 0) {\n      resolve([]);\n      return;\n    }\n    const results = new Array(taskFns.length);\n    let nextIndex = 0;\n    let completedCount = 0;\n    function startNext() {\n      if (nextIndex >= taskFns.length) {\n        return;\n      }\n      const currentIndex = nextIndex;\n      nextIndex++;\n      taskFns[currentIndex]()\n        .then((value) => {\n          results[currentIndex] = value;\n          completedCount++;\n          if (completedCount === taskFns.length) {\n            resolve(results);\n          } else {\n            startNext();\n          }\n        })\n        .catch(reject);\n    }\n    const initialBatchSize = Math.min(limit, taskFns.length);\n    for (let i = 0; i < initialBatchSize; i++) {\n      startNext();\n    }\n  });\n}",
+    "complexity": "Time is O(n) task invocations; wall-clock time is roughly proportional to (n / limit) batches of the slowest tasks, since at most limit run at once.",
+    "variation": "Follow-up: add cancellation support so that if one task rejects, in-flight tasks are aborted (e.g. via AbortController) instead of just letting them finish silently in the background, and discuss how this generalizes to a reusable \"task queue\" or worker pool.",
+    "explain": "The core idea is a self-refilling pool: I start exactly limit tasks up front, and each one, when it finishes, immediately kicks off the next not-yet-started task via a shared startNext function, so there are never more than limit in flight at once. Each task writes its result into a pre-sized results array at its own original index, which is what keeps the final output in input order even though tasks can complete out of order. A shared counter tracks total completions so I know when to resolve the overall promise, and any single task rejection immediately rejects it."
+  },
+  {
+    "id": "cp-20",
+    "title": "Implement a simple EventEmitter (on/off/emit)",
+    "difficulty": "intermediate",
+    "functionName": "createEventEmitter",
+    "statement": "Write a factory function createEventEmitter() that returns an event emitter object with on(event, handler), off(event, handler), and emit(event, ...args) methods. on registers a handler for an event name; off removes a previously registered handler; emit synchronously calls all handlers currently registered for that event name with the given arguments.",
+    "examples": "Input: const emitter = createEventEmitter(); emitter.on('greet', name => console.log('hi ' + name)); emitter.emit('greet', 'Ana');\n-> logs \"hi Ana\"",
+    "constraints": "Multiple handlers can be registered for the same event and should all fire on emit, in registration order. emit on an event with no listeners should not throw.",
+    "starter": "function createEventEmitter() {\n  // your code here\n}",
+    "tests": [
+      {
+        "custom": "(fn) => {\n  const emitter = fn();\n  let received = null;\n  emitter.on('greet', (name) => { received = name; });\n  emitter.emit('greet', 'world');\n  return received === 'world' ? true : 'expected the handler to receive \"world\", got ' + received;\n}",
+        "desc": "on + emit calls the handler with the emitted arguments"
+      },
+      {
+        "custom": "(fn) => {\n  const emitter = fn();\n  let count = 0;\n  emitter.on('tick', () => count++);\n  emitter.on('tick', () => count++);\n  emitter.emit('tick');\n  return count === 2 ? true : 'expected both handlers registered for the same event to fire, got count=' + count;\n}",
+        "desc": "multiple listeners on the same event all fire"
+      },
+      {
+        "custom": "(fn) => {\n  const emitter = fn();\n  let count = 0;\n  const handler = () => count++;\n  emitter.on('tick', handler);\n  emitter.off('tick', handler);\n  emitter.emit('tick');\n  return count === 0 ? true : 'expected the removed handler not to fire, got count=' + count;\n}",
+        "desc": "off removes a specific handler so it no longer fires"
+      },
+      {
+        "custom": "(fn) => {\n  const emitter = fn();\n  try {\n    emitter.emit('nothing-registered');\n    return true;\n  } catch (e) {\n    return 'expected emitting an event with no listeners not to throw, got: ' + e.message;\n  }\n}",
+        "desc": "emitting an event with no listeners does not throw"
+      },
+      {
+        "custom": "(fn) => {\n  const emitterA = fn();\n  const emitterB = fn();\n  let countA = 0;\n  emitterA.on('x', () => countA++);\n  emitterB.emit('x');\n  return countA === 0 ? true : 'expected separate emitter instances to have independent listener state';\n}",
+        "desc": "separate emitter instances do not share listener state"
+      }
+    ],
+    "hints": [
+      "Keep a private object/Map inside the closure mapping event name -> array of handler functions.",
+      "on should lazily create the array for a new event name and push the handler.",
+      "off should filter out the given handler function reference from that event's array.",
+      "emit should look up the array for that event (defaulting to an empty array) and call each handler with the provided arguments, ideally iterating over a copy in case a handler mutates the listener list during emit."
+    ],
+    "solution": "function createEventEmitter() {\n  const listeners = {};\n  return {\n    on(event, handler) {\n      if (!listeners[event]) {\n        listeners[event] = [];\n      }\n      listeners[event].push(handler);\n      return this;\n    },\n    off(event, handler) {\n      if (!listeners[event]) {\n        return this;\n      }\n      listeners[event] = listeners[event].filter((h) => h !== handler);\n      return this;\n    },\n    emit(event, ...args) {\n      if (!listeners[event]) {\n        return false;\n      }\n      listeners[event].slice().forEach((handler) => handler(...args));\n      return true;\n    }\n  };\n}",
+    "complexity": "on/off are O(1)/O(k) respectively where k is the number of handlers on that event; emit is O(k) to call every registered handler.",
+    "variation": "Follow-up: add a \"once(event, handler)\" method that auto-removes itself after firing a single time, implemented by wrapping the handler so it calls off on itself right after invocation.",
+    "explain": "The emitter is just a closure holding a map from event name to an array of handler functions. on lazily creates that array and appends the handler; off filters the given handler reference back out of the array; emit looks up the array for the event name and calls every handler in it with the emitted arguments, iterating over a shallow copy so that a handler adding or removing listeners mid-emit doesn't corrupt the iteration. Each emitter instance closes over its own private listeners object, so separate instances never share state, which is important since it's a factory rather than a class with shared prototype state."
+  },
+  {
+    "id": "cp-21",
+    "title": "Implement pub/sub (topic-based publish/subscribe)",
+    "difficulty": "intermediate",
+    "functionName": "createPubSub",
+    "statement": "Write a factory function createPubSub() that returns a pub/sub bus with subscribe(topic, handler), unsubscribe(topic, handler), and publish(topic, data) methods. This is conceptually similar to an EventEmitter but modeled explicitly around named \"topics\" and a single data payload per publish, and subscribe should return an \"unsubscribe\" function for convenience.",
+    "examples": "Input: const bus = createPubSub(); const unsub = bus.subscribe('news', data => console.log(data)); bus.publish('news', {headline:'hi'});\n-> logs {headline:'hi'}; calling unsub() later stops further delivery to that handler.",
+    "constraints": "publish on a topic with no subscribers should be a no-op (not throw). subscribe should return a function that, when called, unsubscribes that specific handler from that topic.",
+    "starter": "function createPubSub() {\n  // your code here\n}",
+    "tests": [
+      {
+        "custom": "(fn) => {\n  const bus = fn();\n  let received = null;\n  bus.subscribe('news', (data) => { received = data; });\n  bus.publish('news', { headline: 'hi' });\n  return (received && received.headline === 'hi') ? true : 'expected the subscriber to receive the published payload, got ' + JSON.stringify(received);\n}",
+        "desc": "publish delivers data to a subscriber on that topic"
+      },
+      {
+        "custom": "(fn) => {\n  const bus = fn();\n  let called = false;\n  bus.subscribe('topic-a', () => { called = true; });\n  bus.publish('topic-b', {});\n  return called === false ? true : 'expected a handler on topic-a not to fire when publishing to topic-b';\n}",
+        "desc": "publishing to an unrelated topic does not trigger other topics' handlers"
+      },
+      {
+        "custom": "(fn) => {\n  const bus = fn();\n  let count = 0;\n  const unsubscribe = bus.subscribe('x', () => count++);\n  bus.publish('x');\n  unsubscribe();\n  bus.publish('x');\n  return count === 1 ? true : 'expected the unsubscribe function to stop further delivery, got count=' + count;\n}",
+        "desc": "the function returned by subscribe correctly unsubscribes"
+      },
+      {
+        "custom": "(fn) => {\n  const bus = fn();\n  let a = 0;\n  let b = 0;\n  bus.subscribe('t', () => a++);\n  bus.subscribe('t', () => b++);\n  bus.publish('t');\n  return (a === 1 && b === 1) ? true : 'expected both subscribers on the same topic to receive the publish';\n}",
+        "desc": "multiple subscribers to the same topic all receive a publish"
+      }
+    ],
+    "hints": [
+      "Structurally this is very close to an EventEmitter: a map from topic name to a list of handlers.",
+      "subscribe should push the handler and return a closure that calls unsubscribe(topic, handler) when invoked.",
+      "publish looks up the topic's handler list (or does nothing if there isn't one) and calls each handler with the single data payload.",
+      "Keep the two concepts distinct in your explanation even though the implementation is similar: pub/sub is usually about decoupled \"topics\" with a single data payload, while an event emitter is often tied to a specific object's lifecycle events with arbitrary argument lists."
+    ],
+    "solution": "function createPubSub() {\n  const topics = {};\n\n  function unsubscribe(topic, handler) {\n    if (!topics[topic]) {\n      return;\n    }\n    topics[topic] = topics[topic].filter((h) => h !== handler);\n  }\n\n  return {\n    subscribe(topic, handler) {\n      if (!topics[topic]) {\n        topics[topic] = [];\n      }\n      topics[topic].push(handler);\n      return () => unsubscribe(topic, handler);\n    },\n    unsubscribe,\n    publish(topic, data) {\n      if (!topics[topic]) {\n        return;\n      }\n      topics[topic].slice().forEach((handler) => handler(data));\n    }\n  };\n}",
+    "complexity": "subscribe is O(1); unsubscribe is O(k) to filter k handlers on a topic; publish is O(k) to notify all of a topic's subscribers.",
+    "variation": "Follow-up: support wildcard topic subscriptions (e.g. \"orders.*\" matching \"orders.created\" and \"orders.shipped\"), which requires matching publish topics against subscribed patterns instead of exact string equality.",
+    "explain": "Pub/sub here is a topic-keyed map of handler lists, much like an event emitter, but I model it around a single named \"topic\" and a single data payload per publish rather than an arbitrary argument list, which better matches how message buses are usually described. subscribe registers the handler and, for convenience, returns a small closure that calls unsubscribe with that exact topic/handler pair, so callers don't need to hold onto the handler reference themselves. publish simply looks up the topic's handlers and invokes each with the payload, doing nothing if no one is subscribed."
+  },
+  {
+    "id": "cp-22",
+    "title": "Chunk an array into groups of size N",
+    "difficulty": "basic",
+    "functionName": "chunkArray",
+    "statement": "Write a function chunkArray(arr, size) that splits an array into an array of smaller arrays (\"chunks\"), each of length size, except possibly the last chunk which may be shorter if the array doesn't divide evenly.",
+    "examples": "Input: ([1,2,3,4,5], 2) -> Output: [[1,2],[3,4],[5]]\nInput: ([1,2,3], 10) -> Output: [[1,2,3]]",
+    "constraints": "If size is 0 or negative, return an empty array (there is no sensible chunk size). Do not mutate the input array.",
+    "starter": "function chunkArray(arr, size) {\n  // your code here\n}",
+    "tests": [
+      {
+        "args": [
+          [
+            1,
+            2,
+            3,
+            4,
+            5
+          ],
+          2
+        ],
+        "expected": [
+          [
+            1,
+            2
+          ],
+          [
+            3,
+            4
+          ],
+          [
+            5
+          ]
+        ],
+        "desc": "splits into chunks with a shorter last chunk"
+      },
+      {
+        "args": [
+          [],
+          3
+        ],
+        "expected": [],
+        "desc": "empty array returns an empty array of chunks"
+      },
+      {
+        "args": [
+          [
+            1,
+            2,
+            3
+          ],
+          1
+        ],
+        "expected": [
+          [
+            1
+          ],
+          [
+            2
+          ],
+          [
+            3
+          ]
+        ],
+        "desc": "chunk size 1 gives one chunk per element"
+      },
+      {
+        "args": [
+          [
+            1,
+            2,
+            3
+          ],
+          10
+        ],
+        "expected": [
+          [
+            1,
+            2,
+            3
+          ]
+        ],
+        "desc": "chunk size larger than the array gives a single chunk"
+      },
+      {
+        "args": [
+          [
+            1,
+            2,
+            3,
+            4
+          ],
+          0
+        ],
+        "expected": [],
+        "desc": "chunk size 0 returns an empty array"
+      },
+      {
+        "args": [
+          [
+            1,
+            2,
+            3,
+            4,
+            5,
+            6
+          ],
+          3
+        ],
+        "expected": [
+          [
+            1,
+            2,
+            3
+          ],
+          [
+            4,
+            5,
+            6
+          ]
+        ],
+        "desc": "splits evenly when the length is a multiple of size"
+      }
+    ],
+    "hints": [
+      "Guard against size <= 0 up front and return [] immediately.",
+      "Loop over the array with a step of `size`, using Array.prototype.slice(i, i + size) to grab each chunk.",
+      "slice naturally handles the last, possibly-shorter chunk without any special casing.",
+      "This is used constantly for UI needs like paginating a list client-side or laying out a grid N-per-row."
+    ],
+    "solution": "function chunkArray(arr, size) {\n  if (size <= 0) {\n    return [];\n  }\n  const result = [];\n  for (let i = 0; i < arr.length; i += size) {\n    result.push(arr.slice(i, i + size));\n  }\n  return result;\n}",
+    "complexity": "Time and space complexity are both O(n), since every element is copied exactly once into exactly one chunk.",
+    "variation": "Follow-up: implement the inverse, unchunk (flatten one level), or chunk an array into exactly N groups of roughly equal size rather than groups of a fixed size.",
+    "explain": "I step through the array in strides of size, and at each step take a slice from the current index to current+size. Array.prototype.slice safely clamps to the array's actual length, so the final chunk is naturally shorter when the array doesn't divide evenly, with no special-casing needed. I guard against a non-positive size up front since there's no meaningful chunk to produce in that case."
+  },
+  {
+    "id": "cp-23",
+    "title": "Get a nested object value by a dot-path string (e.g. 'a.b.c')",
+    "difficulty": "intermediate",
+    "functionName": "getByPath",
+    "statement": "Write a function getByPath(obj, path, defaultValue) that safely reads a deeply nested value out of an object given a dot-separated path string like 'a.b.c'. If any part of the path doesn't exist, return defaultValue instead of throwing (this is essentially a hand-rolled version of lodash's _.get).",
+    "examples": "Input: ({a:{b:{c:42}}}, 'a.b.c') -> Output: 42\nInput: ({a:{b:{c:42}}}, 'a.x.c', 'fallback') -> Output: 'fallback'",
+    "constraints": "The path may also traverse array indices as numeric string segments (e.g. 'list.1'). Never throw for a missing intermediate key; always fall back to defaultValue in that case.",
+    "starter": "function getByPath(obj, path, defaultValue) {\n  // your code here\n}",
+    "tests": [
+      {
+        "args": [
+          {
+            "a": {
+              "b": {
+                "c": 42
+              }
+            }
+          },
+          "a.b.c"
+        ],
+        "expected": 42,
+        "desc": "reads a value nested several levels deep"
+      },
+      {
+        "args": [
+          {
+            "a": {
+              "b": {
+                "c": 42
+              }
+            }
+          },
+          "a.x.c",
+          "fallback"
+        ],
+        "expected": "fallback",
+        "desc": "returns the default when an intermediate key is missing"
+      },
+      {
+        "args": [
+          {
+            "a": 1
+          },
+          "a"
+        ],
+        "expected": 1,
+        "desc": "works for a single-level path"
+      },
+      {
+        "args": [
+          {
+            "a": [
+              1,
+              2,
+              3
+            ]
+          },
+          "a.1"
+        ],
+        "expected": 2,
+        "desc": "traverses a numeric array index as a path segment"
+      },
+      {
+        "args": [
+          {
+            "a": {
+              "b": null
+            }
+          },
+          "a.b",
+          "default"
+        ],
+        "expected": null,
+        "desc": "returns an explicit null value rather than the default, since the key does exist"
+      },
+      {
+        "args": [
+          {},
+          "x.y.z",
+          0
+        ],
+        "expected": 0,
+        "desc": "returns the default value when the very first key is missing"
+      }
+    ],
+    "hints": [
+      "Split the path string on \".\" to get an ordered list of keys/indices to walk.",
+      "Walk the object one key at a time; if the current value ever becomes null or undefined before you're done, bail out to defaultValue immediately.",
+      "Because array indices are just string keys under the hood in JS (obj[\"1\"] === obj[1]), you can treat every path segment as a plain property lookup, no special array-vs-object branching required.",
+      "Only fall back to defaultValue when the final resolved value is strictly undefined -- an explicit null value found along the path should be returned as-is, not treated as \"missing\"."
+    ],
+    "solution": "function getByPath(obj, path, defaultValue) {\n  const keys = path.split('.');\n  let current = obj;\n  for (const key of keys) {\n    if (current === null || current === undefined) {\n      return defaultValue;\n    }\n    current = current[key];\n  }\n  return current === undefined ? defaultValue : current;\n}",
+    "complexity": "Time complexity is O(k) where k is the number of segments in the path; space is O(k) for the split keys array.",
+    "variation": "Follow-up: implement the companion setByPath(obj, path, value) that writes a value at a dot-path, creating intermediate objects as needed (this connects directly to the immutable-update problem elsewhere in this set).",
+    "explain": "I split the path on dots into an ordered list of keys, then walk the object one key at a time, reassigning a current pointer to current[key] at each step. Before each lookup I check whether the current value has already become null or undefined, and if so I short-circuit to the default rather than letting a TypeError happen from indexing into null. Array indices work automatically here since JavaScript treats array indices as string property keys under the hood, so no separate array-handling branch is needed. At the very end I only substitute the default if the resolved value is undefined, so an explicitly stored null is still returned faithfully."
+  },
+  {
+    "id": "cp-24",
+    "title": "Immutable nested update (update a deeply nested field without mutating original)",
+    "difficulty": "intermediate",
+    "functionName": "immutableUpdate",
+    "statement": "Write a function immutableUpdate(obj, path, value) that returns a new object with the value at the given dot-separated path set to value, without mutating the original obj (or any of its nested objects/arrays). This is the kind of update pattern used constantly in Redux reducers and React state updates.",
+    "examples": "Input: ({a:{b:{c:1}}}, 'a.b.c', 99) -> Output: {a:{b:{c:99}}}, and the original object passed in is left completely unchanged.",
+    "constraints": "Every object/array along the path that is being changed must be shallow-copied so the original references stay untouched; objects not on the path can be shared by reference with the original (structural sharing), which is the standard immutable-update optimization.",
+    "starter": "function immutableUpdate(obj, path, value) {\n  // your code here\n}",
+    "tests": [
+      {
+        "args": [
+          {
+            "a": {
+              "b": {
+                "c": 1
+              }
+            }
+          },
+          "a.b.c",
+          99
+        ],
+        "expected": {
+          "a": {
+            "b": {
+              "c": 99
+            }
+          }
+        },
+        "desc": "updates a deeply nested field"
+      },
+      {
+        "custom": "(fn) => {\n  const original = { a: { b: { c: 1 } } };\n  const originalSnapshot = JSON.stringify(original);\n  fn(original, 'a.b.c', 99);\n  return JSON.stringify(original) === originalSnapshot ? true : 'expected the original object to remain unmutated after the update';\n}",
+        "desc": "does not mutate the original input object"
+      },
+      {
+        "args": [
+          {
+            "x": 1,
+            "y": 2
+          },
+          "y",
+          20
+        ],
+        "expected": {
+          "x": 1,
+          "y": 20
+        },
+        "desc": "updates a top-level field"
+      },
+      {
+        "args": [
+          {
+            "a": {}
+          },
+          "a.b.c",
+          5
+        ],
+        "expected": {
+          "a": {
+            "b": {
+              "c": 5
+            }
+          }
+        },
+        "desc": "creates missing intermediate objects along the path"
+      },
+      {
+        "args": [
+          {
+            "list": [
+              1,
+              2,
+              3
+            ]
+          },
+          "list.1",
+          99
+        ],
+        "expected": {
+          "list": [
+            1,
+            99,
+            3
+          ]
+        },
+        "desc": "updates an array element via a numeric path segment"
+      }
+    ],
+    "hints": [
+      "Split the path into keys, then recurse: at each step, shallow-copy the current level (spread for an object, .slice() for an array) before writing into it.",
+      "At the final key in the path, just set clone[key] = value directly.",
+      "At every other key, recursively compute the updated sub-object for the remaining path and assign that back into the clone.",
+      "If an intermediate key doesn't exist yet, default to an empty object ({}) before recursing, so the path gets created rather than throwing."
+    ],
+    "solution": "function immutableUpdate(obj, path, value) {\n  const keys = path.split('.');\n\n  function updateAt(current, index) {\n    const key = keys[index];\n    const isArrayLevel = Array.isArray(current);\n    const clone = isArrayLevel ? current.slice() : { ...current };\n    if (index === keys.length - 1) {\n      clone[key] = value;\n    } else {\n      clone[key] = updateAt(current[key] || {}, index + 1);\n    }\n    return clone;\n  }\n\n  return updateAt(obj, 0);\n}",
+    "complexity": "Time and space complexity are both O(k + m) where k is the path depth (each level is shallow-copied) and m is the size of the shallow copy made at each of those levels (e.g. number of keys in an object being spread).",
+    "variation": "Follow-up: this is the manual version of what libraries like Immer solve with a draft/proxy approach, or what Immutable.js solves with persistent data structures -- discuss the tradeoffs (readability and \"just write mutating-looking code\" of Immer, vs explicit structural sharing here, vs the memory/API overhead of a full persistent-structure library).",
+    "explain": "The key idea behind an immutable update is structural sharing: only the objects actually on the path from the root down to the changed field need to be copied; everything else can keep pointing at the exact same nested references as before. I implement this recursively, shallow-copying the current level (spreading an object or slicing an array) at every step, and only actually assigning the new value once I reach the last key in the path. Because each recursive call returns a new copy of that level with the next level's updated copy plugged in, the original object's own nested objects are never touched, which is exactly the guarantee a Redux reducer or React setState updater needs."
+  },
+  {
+    "id": "cp-25",
+    "title": "Tree traversal (DFS and BFS over a nested tree structure)",
+    "difficulty": "intermediate",
+    "functionName": "traverseTree",
+    "statement": "Write a function traverseTree(root) that takes the root node of a tree, where each node has an id and a children array (of the same shape), and returns an object { dfs, bfs } containing the flat array of node ids visited in depth-first (pre-order) and breadth-first order, respectively.",
+    "examples": "Input: { id: 1, children: [ { id: 2, children: [{id:4,children:[]},{id:5,children:[]}] }, { id: 3, children: [] } ] }\n-> Output: { dfs: [1,2,4,5,3], bfs: [1,2,3,4,5] }",
+    "constraints": "A node may omit the children property entirely, which should be treated the same as an empty array. The tree is not necessarily balanced and can be arbitrarily deep or wide.",
+    "starter": "function traverseTree(root) {\n  // your code here\n}",
+    "tests": [
+      {
+        "custom": "(fn) => {\n  const tree = {\n    id: 1,\n    children: [\n      { id: 2, children: [ { id: 4, children: [] }, { id: 5, children: [] } ] },\n      { id: 3, children: [] }\n    ]\n  };\n  const result = fn(tree);\n  const dfsOk = JSON.stringify(result.dfs) === JSON.stringify([1, 2, 4, 5, 3]);\n  const bfsOk = JSON.stringify(result.bfs) === JSON.stringify([1, 2, 3, 4, 5]);\n  return (dfsOk && bfsOk) ? true : 'expected dfs=[1,2,4,5,3] and bfs=[1,2,3,4,5], got ' + JSON.stringify(result);\n}",
+        "desc": "produces correct pre-order DFS and level-order BFS on a branching tree"
+      },
+      {
+        "custom": "(fn) => {\n  const tree = { id: 'root', children: [] };\n  const result = fn(tree);\n  const ok = JSON.stringify(result.dfs) === JSON.stringify(['root']) && JSON.stringify(result.bfs) === JSON.stringify(['root']);\n  return ok ? true : 'expected a single-node tree to produce dfs=[root] and bfs=[root]';\n}",
+        "desc": "handles a single-node tree with no children"
+      },
+      {
+        "custom": "(fn) => {\n  const tree = { id: 1, children: [ { id: 2 }, { id: 3 } ] };\n  const result = fn(tree);\n  const ok = JSON.stringify(result.dfs) === JSON.stringify([1, 2, 3]) && JSON.stringify(result.bfs) === JSON.stringify([1, 2, 3]);\n  return ok ? true : 'expected nodes missing an explicit children array to be treated as leaves, got ' + JSON.stringify(result);\n}",
+        "desc": "treats a missing children property as an empty array rather than throwing"
+      },
+      {
+        "custom": "(fn) => {\n  const tree = { id: 'a', children: [ { id: 'b', children: [ { id: 'c', children: [ { id: 'd', children: [] } ] } ] } ] };\n  const result = fn(tree);\n  const ok = JSON.stringify(result.dfs) === JSON.stringify(['a', 'b', 'c', 'd']) && JSON.stringify(result.bfs) === JSON.stringify(['a', 'b', 'c', 'd']);\n  return ok ? true : 'expected both traversals to match on a single-chain (linked-list-shaped) tree';\n}",
+        "desc": "a linear chain tree produces identical DFS and BFS orderings"
+      }
+    ],
+    "hints": [
+      "For DFS: recurse, pushing a node's own id before recursing into each child in order (pre-order traversal).",
+      "For BFS: use an explicit queue (a plain array with shift(), or an index pointer for efficiency), starting with just the root, and repeatedly dequeue a node, record its id, then enqueue all of its children.",
+      "Default `node.children || []` everywhere you access it, so nodes without an explicit children array don't throw.",
+      "These two traversal orders are the backbone of things like rendering a file-tree UI (often DFS, for nested indentation) versus finding the shortest number of \"hops\" between nodes (BFS)."
+    ],
+    "solution": "function traverseTree(root) {\n  const dfsResult = [];\n  const bfsResult = [];\n\n  function walkDepthFirst(node) {\n    if (!node) {\n      return;\n    }\n    dfsResult.push(node.id);\n    (node.children || []).forEach(walkDepthFirst);\n  }\n  walkDepthFirst(root);\n\n  const queue = root ? [root] : [];\n  while (queue.length > 0) {\n    const node = queue.shift();\n    bfsResult.push(node.id);\n    (node.children || []).forEach((child) => queue.push(child));\n  }\n\n  return { dfs: dfsResult, bfs: bfsResult };\n}",
+    "complexity": "Both traversals are O(n) time and O(n) space (for the output arrays, plus O(w) queue space for BFS where w is the tree's maximum width, and O(d) recursion stack for DFS where d is the tree's depth).",
+    "variation": "Follow-up: adapt this to search for a specific node id and return the path of ids from the root to that node, which requires tracking a path/parent chain during the traversal instead of just a flat visited list.",
+    "explain": "DFS and BFS differ only in the order they use to decide \"what to visit next\", which shows up directly in the data structure used to hold pending nodes. For DFS I recurse: visit the current node, then recursively visit each child in order, which naturally produces a pre-order traversal using the call stack as the implicit \"last child goes deepest first\" structure. For BFS I use an explicit FIFO queue seeded with the root; each iteration dequeues the front node, records it, and enqueues all of its children, which guarantees every node at depth d is visited before any node at depth d+1."
+  },
+  {
+    "id": "cp-26",
+    "title": "Convert a flat array of records with parentId into a nested tree",
+    "difficulty": "intermediate",
+    "functionName": "buildTree",
+    "statement": "Write a function buildTree(records) that takes a flat array of records, each shaped like { id, parentId, ...otherFields }, where parentId is null (or undefined) for a root-level record and otherwise refers to another record's id. Return an array of root nodes, each augmented with a children array containing its nested descendants (recursively).",
+    "examples": "Input: [{id:1,parentId:null},{id:2,parentId:1},{id:3,parentId:1},{id:4,parentId:2}]\n-> Output: [ { id:1, parentId:null, children: [ {id:2, parentId:1, children: [{id:4, parentId:2, children:[]}]}, {id:3, parentId:1, children:[]} ] } ]",
+    "constraints": "Records can arrive in any order (a child's record is not guaranteed to appear after its parent's record in the input array). If a record references a parentId that doesn't exist in the input, treat that record as a root instead of dropping it.",
+    "starter": "function buildTree(records) {\n  // your code here\n}",
+    "tests": [
+      {
+        "custom": "(fn) => {\n  const records = [\n    { id: 1, parentId: null, name: 'root' },\n    { id: 2, parentId: 1, name: 'child1' },\n    { id: 3, parentId: 1, name: 'child2' },\n    { id: 4, parentId: 2, name: 'grandchild' }\n  ];\n  const tree = fn(records);\n  const ok = tree.length === 1 &&\n    tree[0].id === 1 &&\n    tree[0].children.length === 2 &&\n    tree[0].children[0].id === 2 &&\n    tree[0].children[0].children.length === 1 &&\n    tree[0].children[0].children[0].id === 4;\n  return ok ? true : 'expected a nested tree with root 1 -> children [2,3], and 2 -> child 4, got ' + JSON.stringify(tree);\n}",
+        "desc": "builds a correctly nested multi-level tree from a flat list"
+      },
+      {
+        "custom": "(fn) => {\n  const records = [\n    { id: 1, parentId: null },\n    { id: 2, parentId: null },\n    { id: 3, parentId: 1 }\n  ];\n  const tree = fn(records);\n  return tree.length === 2 ? true : 'expected 2 top-level root nodes, got ' + tree.length;\n}",
+        "desc": "supports multiple independent root nodes"
+      },
+      {
+        "custom": "(fn) => {\n  const tree = fn([]);\n  return Array.isArray(tree) && tree.length === 0 ? true : 'expected an empty array for an empty input list';\n}",
+        "desc": "an empty input list produces an empty tree"
+      },
+      {
+        "custom": "(fn) => {\n  const records = [ { id: 1, parentId: null }, { id: 2, parentId: null }, { id: 3, parentId: null } ];\n  const tree = fn(records);\n  const ok = tree.length === 3 && tree.every((node) => node.children.length === 0);\n  return ok ? true : 'expected 3 independent root nodes, each with no children';\n}",
+        "desc": "a fully flat list (no parent/child relationships) produces all-root, childless nodes"
+      }
+    ],
+    "hints": [
+      "First pass: build a Map from id to a shallow copy of that record with an empty children array attached, so every record has a stable node object to reference regardless of input order.",
+      "Second pass: for each record, look up its own node in the map, then either push it into its parent's children array (if the parent exists in the map) or treat it as a root.",
+      "Using two passes avoids the classic bug of trying to build the tree in one pass and failing when a child appears in the array before its parent.",
+      "Since parentId can be null, undefined, or a nonexistent id, normalize all three cases to \"this is a root node\"."
+    ],
+    "solution": "function buildTree(records) {\n  const nodesById = new Map();\n  records.forEach((record) => {\n    nodesById.set(record.id, { ...record, children: [] });\n  });\n\n  const roots = [];\n  records.forEach((record) => {\n    const node = nodesById.get(record.id);\n    const hasParent = record.parentId !== null && record.parentId !== undefined && nodesById.has(record.parentId);\n    if (hasParent) {\n      nodesById.get(record.parentId).children.push(node);\n    } else {\n      roots.push(node);\n    }\n  });\n\n  return roots;\n}",
+    "complexity": "Time and space complexity are both O(n): one pass to build the id-to-node map, and one pass to wire each node into its parent's children array (or the roots list).",
+    "variation": "Follow-up: implement the inverse -- flatten a nested tree back into a flat array of records with parentId references, which is useful for sending a locally-edited tree back to an API that stores flat rows.",
+    "explain": "The trick to handling arbitrary input order is doing it in two passes instead of one. In the first pass I build a Map from every record's id to a fresh node object (a shallow copy of the record plus an empty children array), so that by the end of this pass every record has a stable, mutable node object I can reference regardless of where it appeared in the input. In the second pass I walk the records again and, for each one, either push its node into its parent's children array (found via the Map) or, if it has no parentId or that parent isn't present in the data, push it into the top-level roots array instead."
+  },
+  {
+    "id": "cp-27",
+    "title": "Implement an LRU cache (class-based, get/put with capacity eviction)",
+    "difficulty": "senior",
+    "functionName": "createLRUCache",
+    "statement": "Write a factory function createLRUCache(capacity) that returns an LRU (Least Recently Used) cache object with get(key) and put(key, value) methods. get(key) returns the cached value, or -1 if the key isn't present, and counts as \"using\" that key (making it most recently used). put(key, value) inserts or updates a key's value (also making it most recently used); if adding a new key would exceed capacity, evict the least recently used key first.",
+    "examples": "Input: cache = createLRUCache(2); cache.put(1,'a'); cache.put(2,'b'); cache.get(1); cache.put(3,'c');\n-> key 2 is evicted (it was least recently used), key 1 and 3 remain.",
+    "constraints": "Both get and put should run in O(1) average time. capacity is a positive integer.",
+    "starter": "function createLRUCache(capacity) {\n  // your code here\n}",
+    "tests": [
+      {
+        "custom": "(fn) => {\n  const cache = fn(2);\n  cache.put(1, 'a');\n  cache.put(2, 'b');\n  const result = cache.get(1);\n  return result === 'a' ? true : 'expected get(1) to return \"a\", got ' + result;\n}",
+        "desc": "basic put then get returns the stored value"
+      },
+      {
+        "custom": "(fn) => {\n  const cache = fn(2);\n  cache.put(1, 'a');\n  cache.put(2, 'b');\n  cache.get(1);\n  cache.put(3, 'c');\n  const evicted = cache.get(2);\n  const kept = cache.get(1);\n  return (evicted === -1 && kept === 'a') ? true : 'expected key 2 to be evicted (least recently used) and key 1 to remain, got evicted=' + evicted + ' kept=' + kept;\n}",
+        "desc": "evicts the least recently used key when capacity is exceeded"
+      },
+      {
+        "custom": "(fn) => {\n  const cache = fn(2);\n  return cache.get('missing-key') === -1 ? true : 'expected -1 for a key that was never inserted';\n}",
+        "desc": "get on a missing key returns -1"
+      },
+      {
+        "custom": "(fn) => {\n  const cache = fn(2);\n  cache.put(1, 'a');\n  cache.put(2, 'b');\n  cache.put(1, 'z');\n  cache.put(3, 'c');\n  const evicted = cache.get(2);\n  const updated = cache.get(1);\n  return (evicted === -1 && updated === 'z') ? true : 'expected re-putting key 1 to refresh its recency and update its value, evicting key 2 instead, got evicted=' + evicted + ' updated=' + updated;\n}",
+        "desc": "putting an existing key updates its value and refreshes its recency"
+      },
+      {
+        "custom": "(fn) => {\n  const cache = fn(1);\n  cache.put(1, 'a');\n  cache.put(2, 'b');\n  return (cache.get(1) === -1 && cache.get(2) === 'b') ? true : 'expected only the most recently put key to survive with capacity 1';\n}",
+        "desc": "works correctly with a capacity of 1"
+      }
+    ],
+    "hints": [
+      "A JavaScript Map preserves insertion order and lets you delete + re-insert a key to move it to the \"most recently used\" end in O(1).",
+      "On get: if the key is missing return -1; otherwise delete and re-insert it (with the same value) so it becomes the most-recently-used entry, then return its value.",
+      "On put: if the key already exists, delete it first (so re-inserting moves it to the end); if the cache is at capacity and this is a brand-new key, evict the oldest entry, which is the first key yielded by map.keys().next().value.",
+      "This is the same core idea used by real caching layers (and by browser/back-end response caches) to bound memory while keeping \"hot\" data available."
+    ],
+    "solution": "function createLRUCache(capacity) {\n  const store = new Map();\n\n  return {\n    get(key) {\n      if (!store.has(key)) {\n        return -1;\n      }\n      const value = store.get(key);\n      store.delete(key);\n      store.set(key, value);\n      return value;\n    },\n    put(key, value) {\n      if (store.has(key)) {\n        store.delete(key);\n      } else if (store.size >= capacity) {\n        const leastRecentlyUsedKey = store.keys().next().value;\n        store.delete(leastRecentlyUsedKey);\n      }\n      store.set(key, value);\n    }\n  };\n}",
+    "complexity": "Both get and put run in O(1) average time, since Map preserves insertion order and supports O(1) get/set/delete/has; space is O(capacity).",
+    "variation": "Follow-up: implement an LFU (Least Frequently Used) cache instead, which evicts based on access count rather than recency, and discuss why that requires an additional frequency-bucket data structure to stay O(1).",
+    "explain": "I use a single Map as both the storage and the recency tracker, relying on the fact that a JS Map iterates its keys in insertion order. Every time a key is read via get, or written via put, I delete it and re-insert it, which moves it to the \"most recently used\" end of that iteration order; the least-recently-used key is therefore always whatever key comes first when iterating, accessible in O(1) via map.keys().next().value. On put, if the cache is full and the key is new, I evict that first (oldest) key before inserting the new one."
+  },
+  {
+    "id": "cp-28",
+    "title": "Parse a query string into an object (and stringify back)",
+    "difficulty": "intermediate",
+    "functionName": "parseQueryString",
+    "statement": "Write a function parseQueryString(str) that parses a URL query string (with or without a leading \"?\") into a plain object of key-value pairs, URL-decoding both keys and values. If the same key appears more than once, its value in the result should become an array of all the values seen, in order. Also discuss (and implement alongside it) the inverse stringifyQueryString(obj) that turns such an object back into a query string.",
+    "examples": "Input: \"?a=1&b=2\" -> Output: { a: '1', b: '2' }\nInput: \"tag=js&tag=web\" -> Output: { tag: ['js', 'web'] }\nInput: \"name=John%20Doe\" -> Output: { name: 'John Doe' }",
+    "constraints": "Both a leading \"?\" and no leading \"?\" should be accepted. A \"+\" in a value should be decoded as a space, matching typical application/x-www-form-urlencoded query string conventions. An empty string (or just \"?\") should parse to an empty object.",
+    "starter": "function parseQueryString(str) {\n  // your code here\n}\n\nfunction stringifyQueryString(obj) {\n  // bonus: implement the inverse of parseQueryString here\n}",
+    "tests": [
+      {
+        "args": [
+          "?a=1&b=2"
+        ],
+        "expected": {
+          "a": "1",
+          "b": "2"
+        },
+        "desc": "parses a query string with a leading question mark"
+      },
+      {
+        "args": [
+          "a=1&b=2"
+        ],
+        "expected": {
+          "a": "1",
+          "b": "2"
+        },
+        "desc": "parses a query string with no leading question mark"
+      },
+      {
+        "args": [
+          ""
+        ],
+        "expected": {},
+        "desc": "empty string parses to an empty object"
+      },
+      {
+        "args": [
+          "name=John%20Doe"
+        ],
+        "expected": {
+          "name": "John Doe"
+        },
+        "desc": "URL-decodes percent-encoded values"
+      },
+      {
+        "args": [
+          "tag=js&tag=web"
+        ],
+        "expected": {
+          "tag": [
+            "js",
+            "web"
+          ]
+        },
+        "desc": "repeated keys collect into an array of values"
+      },
+      {
+        "args": [
+          "?"
+        ],
+        "expected": {},
+        "desc": "a lone question mark parses to an empty object"
+      },
+      {
+        "args": [
+          "x=hello+world"
+        ],
+        "expected": {
+          "x": "hello world"
+        },
+        "desc": "decodes a + as a space in values"
+      }
+    ],
+    "hints": [
+      "Strip a leading \"?\" if present before doing anything else.",
+      "Split on \"&\" to get each \"key=value\" pair, then split each pair on \"=\" to separate key and value.",
+      "Use decodeURIComponent on both the key and the value, after first replacing \"+\" with a space in the value (since encodeURIComponent doesn't produce \"+\", but form encoding does, and decodeURIComponent alone won't convert it).",
+      "When a key has already been seen once, convert its stored value into an array (or push onto the existing array) instead of overwriting it."
+    ],
+    "solution": "function parseQueryString(str) {\n  const result = {};\n  const query = str.startsWith('?') ? str.slice(1) : str;\n  if (!query) {\n    return result;\n  }\n  query.split('&').forEach((pair) => {\n    const [rawKey, rawValue = ''] = pair.split('=');\n    const key = decodeURIComponent(rawKey);\n    const value = decodeURIComponent(rawValue.replace(/\\+/g, ' '));\n    if (result[key] !== undefined) {\n      result[key] = Array.isArray(result[key]) ? result[key].concat(value) : [result[key], value];\n    } else {\n      result[key] = value;\n    }\n  });\n  return result;\n}\n\nfunction stringifyQueryString(obj) {\n  return Object.keys(obj)\n    .map((key) => {\n      const value = obj[key];\n      if (Array.isArray(value)) {\n        return value.map((v) => encodeURIComponent(key) + '=' + encodeURIComponent(v)).join('&');\n      }\n      return encodeURIComponent(key) + '=' + encodeURIComponent(String(value));\n    })\n    .join('&');\n}",
+    "complexity": "Time and space complexity are both O(n) where n is the length of the query string, since it's a single pass split into pairs.",
+    "variation": "Follow-up: support nested/bracketed keys like \"filters[category]=shoes\" or \"items[0]=a&items[1]=b\", which requires parsing the bracket syntax and building nested objects/arrays instead of a flat key-value map.",
+    "explain": "I first normalize away an optional leading \"?\", then split the remaining string on \"&\" to get individual key=value pairs, and split each of those on \"=\" to separate key from value. Both pieces get decodeURIComponent'd, and for the value I first swap \"+\" characters for literal spaces since that's the form-encoding convention that decodeURIComponent alone doesn't handle. If a key has already been seen, I upgrade its stored value into an array (or append to the existing array) instead of overwriting, which correctly models repeated query keys like multiple \"tag=\" params. I'd also mention the inverse operation, stringifyQueryString, which is the same idea run in reverse using encodeURIComponent."
+  },
+  {
+    "id": "cp-29",
+    "title": "Transform raw API records into table-ready rows for a UI table",
+    "difficulty": "intermediate",
+    "functionName": "transformRecordsForTable",
+    "statement": "Write a function transformRecordsForTable(records, config) that maps an array of raw API records into an array of plain row objects suitable for rendering in a UI table. config.fields is an array of { key, label, format? } descriptors: key is the source property to read from each record, label is the column key to use in the output row, and an optional format(rawValue, record) function computes a display-ready value instead of using the raw value directly.",
+    "examples": "Input: ([{price:9.5}], {fields:[{key:'price',label:'Price',format:(v)=>'$'+v.toFixed(2)}]})\n-> Output: [{ Price: '$9.50' }]",
+    "constraints": "Only the fields listed in config.fields should appear on each output row (this doubles as a \"pick and rename\" utility). If format is omitted for a field, use the raw value unchanged.",
+    "starter": "function transformRecordsForTable(records, config) {\n  // your code here\n}",
+    "tests": [
+      {
+        "args": [
+          [
+            {
+              "id": 1,
+              "firstName": "Ann",
+              "age": 30
+            }
+          ],
+          {
+            "fields": [
+              {
+                "key": "firstName",
+                "label": "Name"
+              },
+              {
+                "key": "age",
+                "label": "Age"
+              }
+            ]
+          }
+        ],
+        "expected": [
+          {
+            "Name": "Ann",
+            "Age": 30
+          }
+        ],
+        "desc": "picks and renames fields, dropping fields not listed in config"
+      },
+      {
+        "args": [
+          [
+            {
+              "price": 9.5
+            }
+          ],
+          {
+            "fields": [
+              {
+                "key": "price",
+                "label": "Price"
+              }
+            ]
+          }
+        ],
+        "expected": [
+          {
+            "Price": "$9.50"
+          }
+        ],
+        "desc": "applies a format function to compute a display value"
+      },
+      {
+        "args": [
+          [],
+          {
+            "fields": [
+              {
+                "key": "a",
+                "label": "A"
+              }
+            ]
+          }
+        ],
+        "expected": [],
+        "desc": "an empty records array returns an empty array of rows"
+      },
+      {
+        "args": [
+          [
+            {
+              "n": 1
+            },
+            {
+              "n": 2
+            }
+          ],
+          {
+            "fields": [
+              {
+                "key": "n",
+                "label": "Number"
+              }
+            ]
+          }
+        ],
+        "expected": [
+          {
+            "Number": 1
+          },
+          {
+            "Number": 2
+          }
+        ],
+        "desc": "transforms multiple records independently"
+      },
+      {
+        "args": [
+          [
+            {
+              "first": "A",
+              "last": "B"
+            }
+          ],
+          {
+            "fields": [
+              {
+                "key": "first",
+                "label": "Full"
+              }
+            ]
+          }
+        ],
+        "expected": [
+          {
+            "Full": "A B"
+          }
+        ],
+        "desc": "the format function receives the whole record, enabling computed columns"
+      }
+    ],
+    "hints": [
+      "Map over records; for each record, build a fresh row object by iterating config.fields.",
+      "For each field descriptor, read record[field.key] as the raw value.",
+      "If field.format is provided, call it with (rawValue, record) to compute the final value; otherwise use the raw value as-is.",
+      "This kind of \"shape the API response for the view\" transform is extremely common in real frontend code, keeping formatting logic out of JSX/templates."
+    ],
+    "solution": "function transformRecordsForTable(records, config) {\n  return records.map((record) => {\n    const row = {};\n    config.fields.forEach((field) => {\n      const rawValue = record[field.key];\n      row[field.label] = field.format ? field.format(rawValue, record) : rawValue;\n    });\n    return row;\n  });\n}",
+    "complexity": "Time complexity is O(n * f) where n is the number of records and f is the number of configured fields; space is O(n * f) for the output rows.",
+    "variation": "Follow-up: add support for a computed-only \"virtual\" field that has no source key at all (format(null, record) style, or a dedicated compute(record) function), useful for things like a \"full name\" or \"status badge\" column derived from multiple source fields.",
+    "explain": "This is a config-driven pick-rename-format pipeline: for every record I build a brand-new row object, and for every field descriptor in the config I read the raw value at field.key off that record, then either pass it through a per-field format function (which also receives the full record, so it can combine multiple source fields) or use the raw value untouched. Only fields explicitly listed in the config end up on the output row, which keeps the table's column set fully declarative and decoupled from whatever extra properties the API response happens to include."
+  },
+  {
+    "id": "cp-30",
+    "title": "Calculate pagination metadata",
+    "difficulty": "basic",
+    "functionName": "getPaginationMeta",
+    "statement": "Write a function getPaginationMeta(totalItems, pageSize, currentPage) that computes pagination metadata: totalPages, hasNext, hasPrev, startIndex (the 0-based index of the first item on the current page), and endIndex (the 0-based index of the last item on the current page).",
+    "examples": "Input: (95, 10, 3) -> Output: { totalPages: 10, hasNext: true, hasPrev: true, startIndex: 20, endIndex: 29 }",
+    "constraints": "If currentPage is out of range (less than 1 or greater than totalPages), clamp it into the valid [1, totalPages] range before computing the rest of the metadata. When totalItems is 0, endIndex should be -1 (there are no items to index).",
+    "starter": "function getPaginationMeta(totalItems, pageSize, currentPage) {\n  // your code here\n}",
+    "tests": [
+      {
+        "args": [
+          95,
+          10,
+          3
+        ],
+        "expected": {
+          "totalPages": 10,
+          "hasNext": true,
+          "hasPrev": true,
+          "startIndex": 20,
+          "endIndex": 29
+        },
+        "desc": "computes metadata for a middle page"
+      },
+      {
+        "args": [
+          95,
+          10,
+          1
+        ],
+        "expected": {
+          "totalPages": 10,
+          "hasNext": true,
+          "hasPrev": false,
+          "startIndex": 0,
+          "endIndex": 9
+        },
+        "desc": "first page has no previous page"
+      },
+      {
+        "args": [
+          95,
+          10,
+          10
+        ],
+        "expected": {
+          "totalPages": 10,
+          "hasNext": false,
+          "hasPrev": true,
+          "startIndex": 90,
+          "endIndex": 94
+        },
+        "desc": "last (partial) page has no next page and a shorter endIndex"
+      },
+      {
+        "args": [
+          0,
+          10,
+          1
+        ],
+        "expected": {
+          "totalPages": 1,
+          "hasNext": false,
+          "hasPrev": false,
+          "startIndex": 0,
+          "endIndex": -1
+        },
+        "desc": "zero total items still returns sane metadata with endIndex -1"
+      },
+      {
+        "args": [
+          10,
+          10,
+          1
+        ],
+        "expected": {
+          "totalPages": 1,
+          "hasNext": false,
+          "hasPrev": false,
+          "startIndex": 0,
+          "endIndex": 9
+        },
+        "desc": "a single page that exactly fits the page size"
+      },
+      {
+        "args": [
+          25,
+          10,
+          99
+        ],
+        "expected": {
+          "totalPages": 3,
+          "hasNext": false,
+          "hasPrev": true,
+          "startIndex": 20,
+          "endIndex": 24
+        },
+        "desc": "an out-of-range currentPage is clamped to the last valid page"
+      }
+    ],
+    "hints": [
+      "totalPages is Math.ceil(totalItems / pageSize), but should be at least 1 even when totalItems is 0.",
+      "Clamp currentPage into [1, totalPages] with Math.min(Math.max(currentPage, 1), totalPages) before using it in any other calculation.",
+      "startIndex is (clampedPage - 1) * pageSize.",
+      "endIndex is Math.min(startIndex + pageSize, totalItems) - 1, which naturally shortens the last page and also produces -1 when totalItems is 0."
+    ],
+    "solution": "function getPaginationMeta(totalItems, pageSize, currentPage) {\n  const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));\n  const page = Math.min(Math.max(currentPage, 1), totalPages);\n  const startIndex = (page - 1) * pageSize;\n  const endIndex = Math.min(startIndex + pageSize, totalItems) - 1;\n\n  return {\n    totalPages,\n    hasNext: page < totalPages,\n    hasPrev: page > 1,\n    startIndex,\n    endIndex\n  };\n}",
+    "complexity": "Time and space complexity are both O(1), since this is pure arithmetic with no iteration.",
+    "variation": "Follow-up: extend this to compute a bounded window of visible page numbers for a pagination control (e.g. show up to 5 page-number buttons centered on the current page, with ellipses at the edges).",
+    "explain": "I first compute totalPages with a ceiling division, flooring it at 1 so an empty dataset still reports a sensible single page. I then clamp the requested currentPage into the valid [1, totalPages] range, since a caller might pass an out-of-bounds page number from a stale URL or bad input. From that clamped page, startIndex is just (page-1) times pageSize, and endIndex is the smaller of \"a full page's worth past startIndex\" or the actual totalItems count, minus one -- that same formula naturally produces a shorter last page and a sentinel -1 when there are zero items."
+  },
+  {
+    "id": "cp-31",
+    "title": "Build a search+sort+filter pipeline function over an array of objects",
+    "difficulty": "senior",
+    "functionName": "queryPipeline",
+    "statement": "Write a function queryPipeline(data, config) that runs a small declarative pipeline over an array of objects: config.filters is a map of { key: value } exact-match filters (all must match), config.searchTerm plus config.searchKeys does a case-insensitive substring search across the listed fields, and config.sortKey (with optional config.sortOrder, 'asc' or 'desc', default 'asc') sorts the final result. Any of these config pieces may be omitted, in which case that stage is skipped.",
+    "examples": "Input: (products, {filters:{category:'tools'}, sortKey:'price', sortOrder:'desc'})\n-> filters down to tools, then sorts them by price descending.",
+    "constraints": "The stages should apply in this order: filters, then search, then sort. Do not mutate the input data array.",
+    "starter": "function queryPipeline(data, config) {\n  // your code here\n}",
+    "tests": [
+      {
+        "args": [
+          [
+            {
+              "id": 1,
+              "name": "Widget",
+              "category": "tools",
+              "price": 10
+            },
+            {
+              "id": 2,
+              "name": "Gadget",
+              "category": "electronics",
+              "price": 20
+            },
+            {
+              "id": 3,
+              "name": "Wrench",
+              "category": "tools",
+              "price": 15
+            }
+          ],
+          {
+            "filters": {
+              "category": "tools"
+            }
+          }
+        ],
+        "expected": [
+          {
+            "id": 1,
+            "name": "Widget",
+            "category": "tools",
+            "price": 10
+          },
+          {
+            "id": 3,
+            "name": "Wrench",
+            "category": "tools",
+            "price": 15
+          }
+        ],
+        "desc": "filters by an exact-match key/value"
+      },
+      {
+        "args": [
+          [
+            {
+              "id": 1,
+              "name": "Widget",
+              "category": "tools",
+              "price": 10
+            },
+            {
+              "id": 2,
+              "name": "Gadget",
+              "category": "electronics",
+              "price": 20
+            },
+            {
+              "id": 3,
+              "name": "Wrench",
+              "category": "tools",
+              "price": 15
+            }
+          ],
+          {
+            "searchTerm": "wr",
+            "searchKeys": [
+              "name"
+            ]
+          }
+        ],
+        "expected": [
+          {
+            "id": 3,
+            "name": "Wrench",
+            "category": "tools",
+            "price": 15
+          }
+        ],
+        "desc": "searches case-insensitively across the given keys"
+      },
+      {
+        "args": [
+          [
+            {
+              "id": 1,
+              "name": "Widget",
+              "category": "tools",
+              "price": 10
+            },
+            {
+              "id": 2,
+              "name": "Gadget",
+              "category": "electronics",
+              "price": 20
+            },
+            {
+              "id": 3,
+              "name": "Wrench",
+              "category": "tools",
+              "price": 15
+            }
+          ],
+          {
+            "sortKey": "price"
+          }
+        ],
+        "expected": [
+          {
+            "id": 1,
+            "name": "Widget",
+            "category": "tools",
+            "price": 10
+          },
+          {
+            "id": 3,
+            "name": "Wrench",
+            "category": "tools",
+            "price": 15
+          },
+          {
+            "id": 2,
+            "name": "Gadget",
+            "category": "electronics",
+            "price": 20
+          }
+        ],
+        "desc": "sorts ascending by default"
+      },
+      {
+        "args": [
+          [
+            {
+              "id": 1,
+              "name": "Widget",
+              "category": "tools",
+              "price": 10
+            },
+            {
+              "id": 2,
+              "name": "Gadget",
+              "category": "electronics",
+              "price": 20
+            },
+            {
+              "id": 3,
+              "name": "Wrench",
+              "category": "tools",
+              "price": 15
+            }
+          ],
+          {
+            "sortKey": "price",
+            "sortOrder": "desc"
+          }
+        ],
+        "expected": [
+          {
+            "id": 2,
+            "name": "Gadget",
+            "category": "electronics",
+            "price": 20
+          },
+          {
+            "id": 3,
+            "name": "Wrench",
+            "category": "tools",
+            "price": 15
+          },
+          {
+            "id": 1,
+            "name": "Widget",
+            "category": "tools",
+            "price": 10
+          }
+        ],
+        "desc": "sorts descending when requested"
+      },
+      {
+        "args": [
+          [
+            {
+              "id": 1,
+              "name": "Widget",
+              "category": "tools",
+              "price": 10
+            },
+            {
+              "id": 2,
+              "name": "Gadget",
+              "category": "electronics",
+              "price": 20
+            },
+            {
+              "id": 3,
+              "name": "Wrench",
+              "category": "tools",
+              "price": 15
+            }
+          ],
+          {
+            "filters": {
+              "category": "tools"
+            },
+            "sortKey": "price",
+            "sortOrder": "desc"
+          }
+        ],
+        "expected": [
+          {
+            "id": 3,
+            "name": "Wrench",
+            "category": "tools",
+            "price": 15
+          },
+          {
+            "id": 1,
+            "name": "Widget",
+            "category": "tools",
+            "price": 10
+          }
+        ],
+        "desc": "combines filtering and sorting in one call"
+      },
+      {
+        "args": [
+          [
+            {
+              "id": 1,
+              "name": "Widget",
+              "category": "tools",
+              "price": 10
+            }
+          ],
+          {}
+        ],
+        "expected": [
+          {
+            "id": 1,
+            "name": "Widget",
+            "category": "tools",
+            "price": 10
+          }
+        ],
+        "desc": "an empty config returns the data effectively unchanged"
+      }
+    ],
+    "hints": [
+      "Start by copying the input array (e.g. data.slice()) so the pipeline never mutates the caller's array.",
+      "Apply each configured filter key/value pair with a plain .filter(item => item[key] === value), chaining across multiple filter keys if present.",
+      "For search, lowercase the searchTerm once, then keep items where any of the searchKeys, lowercased, includes that term as a substring.",
+      "Sort last, using a comparator that flips direction based on sortOrder, and make sure to sort a copy rather than the array you've been filtering in place."
+    ],
+    "solution": "function queryPipeline(data, config = {}) {\n  let result = data.slice();\n  const { searchTerm, searchKeys = [], filters = {}, sortKey, sortOrder = 'asc' } = config;\n\n  Object.keys(filters).forEach((key) => {\n    const filterValue = filters[key];\n    result = result.filter((item) => item[key] === filterValue);\n  });\n\n  if (searchTerm) {\n    const term = searchTerm.toLowerCase();\n    result = result.filter((item) =>\n      searchKeys.some((key) => String(item[key] == null ? '' : item[key]).toLowerCase().includes(term))\n    );\n  }\n\n  if (sortKey) {\n    result = result.slice().sort((a, b) => {\n      if (a[sortKey] < b[sortKey]) return sortOrder === 'desc' ? 1 : -1;\n      if (a[sortKey] > b[sortKey]) return sortOrder === 'desc' ? -1 : 1;\n      return 0;\n    });\n  }\n\n  return result;\n}",
+    "complexity": "Time complexity is roughly O(n * (filters + searchKeys)) for the filter/search stages plus O(n log n) for the sort stage; space is O(n) for the intermediate/result arrays.",
+    "variation": "Follow-up: make this pagination-aware by adding a final \"page\" stage (reusing the pagination metadata problem) so the pipeline directly returns exactly the slice of results a UI table page needs.",
+    "explain": "I treat this as a small declarative pipeline where each stage is optional and they compose in a fixed order: exact-match filters first, then a substring search across a configurable set of fields, then a final sort. Each stage reads its own piece of the config object and, if that piece is absent, is simply skipped, which keeps the function usable for any subset of these operations. I'm careful to always operate on a fresh array at each stage (starting from data.slice()) so the original input array is never mutated, which matters a lot in frontend code where that array might be directly backing rendered UI state."
+  },
+  {
+    "id": "cp-32",
+    "title": "Type-safe API result wrapper (Result<T, E>-style ok/err)",
+    "difficulty": "intermediate",
+    "functionName": "toResult",
+    "statement": "Discuss how a Result<T, E>-style wrapper (common in Rust/functional languages, and increasingly used in TypeScript to avoid throwing exceptions for expected failure cases) can model \"this operation either succeeds with a value or fails with an error\" more explicitly than throw/catch. Then implement toResult(fn): call the given zero-argument function fn, and return { ok: true, value } if it returns normally, or { ok: false, error } (where error is a string message) if it throws.",
+    "examples": "Input: () => 42 -> Output: { ok: true, value: 42 }\nInput: () => { throw new Error('bad'); } -> Output: { ok: false, error: 'bad' }",
+    "constraints": "Handle both thrown Error instances (use their .message) and thrown non-Error values (like a plain string) by coercing them to a string for the error field.",
+    "starter": "function toResult(fn) {\n  // your code here\n}",
+    "tests": [
+      {
+        "args": [
+          null
+        ],
+        "expected": {
+          "ok": true,
+          "value": 42
+        },
+        "desc": "wraps a normal return value as a success result"
+      },
+      {
+        "args": [
+          null
+        ],
+        "expected": {
+          "ok": false,
+          "error": "bad"
+        },
+        "desc": "wraps a thrown Error as a failure result using its message"
+      },
+      {
+        "args": [
+          null
+        ],
+        "expected": {
+          "ok": true,
+          "value": "hello"
+        },
+        "desc": "works with a string return value"
+      },
+      {
+        "args": [
+          null
+        ],
+        "expected": {
+          "ok": false,
+          "error": "network failed"
+        },
+        "desc": "captures a more realistic error message"
+      },
+      {
+        "args": [
+          null
+        ],
+        "expected": {
+          "ok": true,
+          "value": [
+            1,
+            2,
+            3
+          ]
+        },
+        "desc": "works with an array return value"
+      },
+      {
+        "args": [
+          null
+        ],
+        "expected": {
+          "ok": false,
+          "error": "plain string error"
+        },
+        "desc": "handles a thrown non-Error (plain string) value"
+      }
+    ],
+    "hints": [
+      "Wrap the call to fn() in a try/catch block.",
+      "On success, return { ok: true, value: <the return value> }.",
+      "On failure, check `error instanceof Error` to decide whether to use error.message or fall back to String(error) for non-Error throws (like a thrown string or plain object).",
+      "This pattern is genuinely used in TypeScript codebases as a Result<T, E> type, forcing callers to check the `ok` discriminant before accessing `value`, instead of silently letting an unhandled exception propagate."
+    ],
+    "solution": "function toResult(fn) {\n  try {\n    const value = fn();\n    return { ok: true, value };\n  } catch (error) {\n    const message = error instanceof Error ? error.message : String(error);\n    return { ok: false, error: message };\n  }\n}",
+    "complexity": "Time complexity is O(1) plus whatever fn itself costs; space is O(1) for the small wrapper object.",
+    "variation": "Follow-up: extend this to an async version, toResultAsync(asyncFn), that awaits a promise and returns the same { ok, value } / { ok: false, error } shape instead of letting a rejection propagate, which is a very common pattern for wrapping fetch calls in real apps.",
+    "explain": "The motivation for a Result-style wrapper is that TypeScript's type system has no way to see that a function might throw -- a function's return type says nothing about the exceptions it can raise, so callers can easily forget to catch. By instead returning a discriminated union like { ok: true, value } or { ok: false, error }, the type checker can force callers to check the ok flag before touching value, similar to how Result<T, E> works in Rust. The implementation itself is simple: call fn inside a try/catch, wrap a normal return in an ok result, and on a catch, normalize whatever was thrown (an Error instance or any other thrown value) into a plain string error message."
+  },
+  {
+    "id": "cp-33",
+    "title": "Write a generic utility function: pick(obj, keys)",
+    "difficulty": "basic",
+    "functionName": "pick",
+    "statement": "Write a generic utility function pick(obj, keys) that returns a new object containing only the properties of obj whose names are listed in the keys array. Keys not present on obj should simply be skipped rather than added as undefined. This is a small, widely reusable utility (similar to lodash's _.pick) worth being able to write from memory.",
+    "examples": "Input: ({a:1,b:2,c:3}, ['a','c']) -> Output: {a:1,c:3}",
+    "constraints": "Do not mutate obj. Only include a key in the result if obj actually owns that property (use hasOwnProperty rather than just checking obj[key] !== undefined, so a key whose value is legitimately undefined or 0 or false is still included correctly).",
+    "starter": "function pick(obj, keys) {\n  // your code here\n}",
+    "tests": [
+      {
+        "args": [
+          {
+            "a": 1,
+            "b": 2,
+            "c": 3
+          },
+          [
+            "a",
+            "c"
+          ]
+        ],
+        "expected": {
+          "a": 1,
+          "c": 3
+        },
+        "desc": "picks a subset of keys"
+      },
+      {
+        "args": [
+          {
+            "a": 1,
+            "b": 2
+          },
+          []
+        ],
+        "expected": {},
+        "desc": "an empty keys list returns an empty object"
+      },
+      {
+        "args": [
+          {
+            "a": 1
+          },
+          [
+            "a",
+            "missing"
+          ]
+        ],
+        "expected": {
+          "a": 1
+        },
+        "desc": "silently skips a requested key that does not exist on the object"
+      },
+      {
+        "args": [
+          {},
+          [
+            "a"
+          ]
+        ],
+        "expected": {},
+        "desc": "picking from an empty object returns an empty object"
+      },
+      {
+        "args": [
+          {
+            "a": 1,
+            "b": 2,
+            "c": 3
+          },
+          [
+            "a",
+            "b",
+            "c"
+          ]
+        ],
+        "expected": {
+          "a": 1,
+          "b": 2,
+          "c": 3
+        },
+        "desc": "picking every key returns an equivalent object"
+      },
+      {
+        "args": [
+          {
+            "a": 0,
+            "b": 2
+          },
+          [
+            "a",
+            "b"
+          ]
+        ],
+        "expected": {
+          "a": 0,
+          "b": 2
+        },
+        "desc": "preserves a falsy-but-present value (0) rather than skipping it"
+      }
+    ],
+    "hints": [
+      "Build a fresh result object and only assign into it, never mutate the input.",
+      "Iterate the requested keys array (not Object.keys(obj)), so the output preserves exactly the requested subset.",
+      "Guard each assignment with Object.prototype.hasOwnProperty.call(obj, key) so a genuinely-missing key is skipped rather than added as `undefined`.",
+      "Watch out for a naive `if (obj[key])` check, which would incorrectly skip falsy-but-present values like 0, \"\", or false."
+    ],
+    "solution": "function pick(obj, keys) {\n  const result = {};\n  keys.forEach((key) => {\n    if (Object.prototype.hasOwnProperty.call(obj, key)) {\n      result[key] = obj[key];\n    }\n  });\n  return result;\n}",
+    "complexity": "Time and space complexity are both O(k) where k is the number of requested keys.",
+    "variation": "Follow-up: implement the inverse, omit(obj, keys), which returns a new object with every property except the listed keys, and discuss whether it's easier to implement it from scratch or in terms of pick and Object.keys.",
+    "explain": "I iterate over the requested keys array, rather than the object's own keys, since the goal is exactly the requested subset in whatever order they were asked for. For each requested key, I use hasOwnProperty (via Object.prototype.hasOwnProperty.call, to be safe even if obj happens to shadow its own hasOwnProperty) to check whether the object actually owns that property before copying it into a brand-new result object, which correctly distinguishes \"the key is missing\" from \"the key is present with a falsy value like 0 or false\"."
+  },
+  {
+    "id": "cp-34",
+    "title": "Implement a reducer for a discriminated-union of actions (mini Redux cart reducer)",
+    "difficulty": "intermediate",
+    "functionName": "cartReducer",
+    "statement": "Write a pure reducer function cartReducer(state, action) for a shopping cart, in the classic Redux style. state is shaped like { items: [{ id, name, price, qty }] }. Support four action types: 'ADD_ITEM' (payload: {id, name, price} -- if the item already exists, increment its qty by 1, otherwise add it with qty 1), 'REMOVE_ITEM' (payload: {id} -- removes that item entirely), 'UPDATE_QTY' (payload: {id, qty} -- sets that item's qty directly), and 'CLEAR' (no payload -- empties the cart). Any unrecognized action type should return the state unchanged.",
+    "examples": "Input: ({items: []}, {type: 'ADD_ITEM', payload: {id: 1, name: 'Book', price: 10}})\n-> Output: {items: [{id: 1, name: 'Book', price: 10, qty: 1}]}",
+    "constraints": "The reducer must be pure: never mutate the state argument or any of its nested arrays/objects; always return a new state object for a recognized action.",
+    "starter": "function cartReducer(state, action) {\n  // your code here\n}",
+    "tests": [
+      {
+        "args": [
+          {
+            "items": []
+          },
+          {
+            "type": "ADD_ITEM",
+            "payload": {
+              "id": 1,
+              "name": "Book",
+              "price": 10
+            }
+          }
+        ],
+        "expected": {
+          "items": [
+            {
+              "id": 1,
+              "name": "Book",
+              "price": 10,
+              "qty": 1
+            }
+          ]
+        },
+        "desc": "adds a new item to an empty cart"
+      },
+      {
+        "args": [
+          {
+            "items": [
+              {
+                "id": 1,
+                "name": "Book",
+                "price": 10,
+                "qty": 1
+              }
+            ]
+          },
+          {
+            "type": "ADD_ITEM",
+            "payload": {
+              "id": 1,
+              "name": "Book",
+              "price": 10
+            }
+          }
+        ],
+        "expected": {
+          "items": [
+            {
+              "id": 1,
+              "name": "Book",
+              "price": 10,
+              "qty": 2
+            }
+          ]
+        },
+        "desc": "adding an already-present item increments its quantity instead of duplicating it"
+      },
+      {
+        "args": [
+          {
+            "items": [
+              {
+                "id": 1,
+                "name": "Book",
+                "price": 10,
+                "qty": 1
+              },
+              {
+                "id": 2,
+                "name": "Pen",
+                "price": 2,
+                "qty": 3
+              }
+            ]
+          },
+          {
+            "type": "REMOVE_ITEM",
+            "payload": {
+              "id": 1
+            }
+          }
+        ],
+        "expected": {
+          "items": [
+            {
+              "id": 2,
+              "name": "Pen",
+              "price": 2,
+              "qty": 3
+            }
+          ]
+        },
+        "desc": "removes the specified item and leaves the rest of the cart untouched"
+      },
+      {
+        "args": [
+          {
+            "items": [
+              {
+                "id": 1,
+                "name": "Book",
+                "price": 10,
+                "qty": 1
+              }
+            ]
+          },
+          {
+            "type": "UPDATE_QTY",
+            "payload": {
+              "id": 1,
+              "qty": 5
+            }
+          }
+        ],
+        "expected": {
+          "items": [
+            {
+              "id": 1,
+              "name": "Book",
+              "price": 10,
+              "qty": 5
+            }
+          ]
+        },
+        "desc": "directly sets a specific item's quantity"
+      },
+      {
+        "args": [
+          {
+            "items": [
+              {
+                "id": 1,
+                "name": "Book",
+                "price": 10,
+                "qty": 1
+              }
+            ]
+          },
+          {
+            "type": "CLEAR"
+          }
+        ],
+        "expected": {
+          "items": []
+        },
+        "desc": "empties the entire cart"
+      },
+      {
+        "args": [
+          {
+            "items": [
+              {
+                "id": 1,
+                "name": "Book",
+                "price": 10,
+                "qty": 1
+              }
+            ]
+          },
+          {
+            "type": "UNKNOWN_ACTION"
+          }
+        ],
+        "expected": {
+          "items": [
+            {
+              "id": 1,
+              "name": "Book",
+              "price": 10,
+              "qty": 1
+            }
+          ]
+        },
+        "desc": "an unrecognized action type returns the state unchanged"
+      }
+    ],
+    "hints": [
+      "A switch statement on action.type is the idiomatic Redux reducer shape.",
+      "Use state.items.find to check whether ADD_ITEM's target id already exists in the cart.",
+      "Use .map to produce a new items array when updating one item in place (for the increment-qty and UPDATE_QTY cases), and .filter to produce a new items array with one item removed.",
+      "Always include a `default: return state;` case so unrecognized actions are safely ignored, which is required for compatibility with combineReducers-style setups in real Redux stores."
+    ],
+    "solution": "function cartReducer(state, action) {\n  switch (action.type) {\n    case 'ADD_ITEM': {\n      const existingItem = state.items.find((item) => item.id === action.payload.id);\n      if (existingItem) {\n        return {\n          ...state,\n          items: state.items.map((item) =>\n            item.id === action.payload.id ? { ...item, qty: item.qty + 1 } : item\n          )\n        };\n      }\n      return {\n        ...state,\n        items: [...state.items, { ...action.payload, qty: 1 }]\n      };\n    }\n    case 'REMOVE_ITEM':\n      return {\n        ...state,\n        items: state.items.filter((item) => item.id !== action.payload.id)\n      };\n    case 'UPDATE_QTY':\n      return {\n        ...state,\n        items: state.items.map((item) =>\n          item.id === action.payload.id ? { ...item, qty: action.payload.qty } : item\n        )\n      };\n    case 'CLEAR':\n      return { ...state, items: [] };\n    default:\n      return state;\n  }\n}",
+    "complexity": "Each action handler is O(n) in the number of items in the cart, due to the map/filter/find scan; space is O(n) for the newly created items array.",
+    "variation": "Follow-up: add a derived \"total\" field to the state (computed as the sum of price * qty across items) that must stay in sync on every action, and discuss whether to compute it inside the reducer itself versus with a memoized selector outside of it (the more idiomatic Redux approach, to keep the reducer minimal and avoid redundant state).",
+    "explain": "This follows the standard Redux reducer contract: a pure function of (state, action) that returns a brand-new state object for actions it understands, and the exact same state reference for anything it doesn't, via a switch statement's default case. For ADD_ITEM I first check whether an item with that id already exists using find, and either bump its qty via a mapped copy of the items array, or append a new item (spread from the payload) with qty initialized to 1. REMOVE_ITEM and UPDATE_QTY use filter and map respectively to produce new arrays without mutating the original, and CLEAR just resets items to an empty array -- in every branch I spread the original state and only override the items key, so any other top-level state fields are preserved untouched."
+  },
+  {
+    "id": "cp-35",
+    "title": "Race-condition-safe data loader (latest-call-wins)",
+    "difficulty": "senior",
+    "functionName": "createLatestOnlyLoader",
+    "statement": "Write a factory function createLatestOnlyLoader(fetcher) that wraps an async fetcher function to guard against race conditions: it should return an object with load(...args) (calls fetcher(...args) and, once it resolves, applies its result as the current state -- but only if no newer load() call has been made in the meantime) and getState() (returns the most recently applied result). This models the classic React data-fetching bug where a slow, stale response from an earlier request arrives after a faster, more recent request has already updated the UI, and incorrectly overwrites it.",
+    "examples": "Input: loader.load('A', 50 /*ms delay*/); loader.load('B', 10 /*ms delay*/);\n-> even though the call for 'A' takes longer and its promise resolves after 'B''s, the state must end up as 'B', since 'B' was the more recently invoked call.",
+    "constraints": "Track \"recency\" by order of invocation (when load() is called), not by order of resolution. A stale response arriving after a newer call has already been issued must be discarded, even if that stale response arrives before the newer call resolves.",
+    "starter": "function createLatestOnlyLoader(fetcher) {\n  // your code here\n}",
+    "tests": [
+      {
+        "custom": "(fn) => {\n  const fetcher = (value, delay) => new Promise((resolve) => setTimeout(() => resolve(value), delay));\n  const loader = fn(fetcher);\n  const firstCall = loader.load('A', 50);\n  const secondCall = loader.load('B', 10);\n  return Promise.all([firstCall, secondCall]).then(() => {\n    return loader.getState() === 'B' ? true : 'expected final state to be \"B\" (the more recently invoked call), got ' + loader.getState();\n  });\n}",
+        "desc": "async: a slower, earlier call must not overwrite a faster, more recently invoked call"
+      },
+      {
+        "custom": "(fn) => {\n  const fetcher = (value, delay) => new Promise((resolve) => setTimeout(() => resolve(value), delay));\n  const loader = fn(fetcher);\n  return loader.load('only', 10).then(() => {\n    return loader.getState() === 'only' ? true : 'expected state to be \"only\" after a single call resolves, got ' + loader.getState();\n  });\n}",
+        "desc": "async: a single call updates state normally"
+      },
+      {
+        "custom": "(fn) => {\n  const fetcher = (value, delay) => new Promise((resolve) => setTimeout(() => resolve(value), delay));\n  const loader = fn(fetcher);\n  const call1 = loader.load('first', 40);\n  const call2 = loader.load('second', 30);\n  const call3 = loader.load('third', 5);\n  return Promise.all([call1, call2, call3]).then(() => {\n    return loader.getState() === 'third' ? true : 'expected final state to be \"third\" (the last invoked call) regardless of resolution timing, got ' + loader.getState();\n  });\n}",
+        "desc": "async: with three overlapping calls, only the most recently invoked one wins"
+      },
+      {
+        "custom": "(fn) => {\n  const fetcher = (value, delay) => new Promise((resolve) => setTimeout(() => resolve(value), delay));\n  const loader = fn(fetcher);\n  return loader.load('x', 5).then(() => {\n    return loader.load('y', 5).then(() => {\n      return loader.getState() === 'y' ? true : 'expected sequential (non-overlapping) calls to each update state in turn, got ' + loader.getState();\n    });\n  });\n}",
+        "desc": "async: sequential, non-overlapping calls each update state as expected"
+      }
+    ],
+    "hints": [
+      "Keep a single \"latest issued token\" counter in the closure, starting at 0.",
+      "Every time load() is called, immediately increment and capture that token as \"this call's token\", before the async fetcher call even starts.",
+      "When the fetcher's promise resolves, compare this call's captured token against the current latest token; only apply the result to state if they still match (meaning no newer call has been issued since).",
+      "This token/counter pattern is the simplest version of what libraries like React Query or SWR, and the useEffect cleanup-based \"ignore stale response\" pattern, solve more generally."
+    ],
+    "solution": "function createLatestOnlyLoader(fetcher) {\n  let latestToken = 0;\n  let state;\n\n  return {\n    load(...args) {\n      const thisCallToken = ++latestToken;\n      return fetcher(...args).then((value) => {\n        const isStillLatest = thisCallToken === latestToken;\n        if (isStillLatest) {\n          state = value;\n        }\n        return { applied: isStillLatest, value };\n      });\n    },\n    getState() {\n      return state;\n    }\n  };\n}",
+    "complexity": "Each load() call is O(1) overhead beyond the cost of fetcher itself; space is O(1) for the token counter and current state.",
+    "variation": "Follow-up: adapt this into a small React hook (useLatestOnlyFetch) that stores the result in useState and uses this same token pattern (or an AbortController) inside a useEffect, so a component never renders a stale response after its dependencies have already changed and triggered a newer fetch.",
+    "explain": "The classic bug here is assuming that resolution order matches invocation order, which is false for anything network-based -- an earlier request can easily finish after a later one if the network or server is slow for that particular call. I fix this with a simple monotonically increasing token: every call to load() immediately claims the next token value before calling the fetcher, and when that fetcher's promise eventually resolves, I only apply its result to state if its captured token still equals the current latest token in the closure. If a newer call has been issued in the meantime, the latest token will have moved on, so the stale response is silently discarded instead of overwriting more recent state."
+  }
+]

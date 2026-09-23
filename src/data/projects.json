@@ -1,0 +1,869 @@
+[
+  {
+    "id": "procoach",
+    "name": "ProCoach",
+    "tagline": "Coaching marketplace — Next.js, React, TypeScript, Tailwind, shadcn/ui",
+    "context": "A coaching marketplace connecting coaches, learners and parents: session discovery, enrollment, scheduling and role-specific dashboards, with JWT/OTP authentication, role-based access control, and Stripe Embedded Checkout / Stripe Connect surfaces for payments.",
+    "stack": [
+      "Next.js (App Router)",
+      "React",
+      "TypeScript",
+      "Tailwind CSS",
+      "shadcn/ui",
+      "JWT/OTP auth",
+      "Stripe Embedded Checkout",
+      "Stripe Connect",
+      "REST APIs"
+    ],
+    "questions": [
+      {
+        "id": "pc-g1",
+        "type": "generic",
+        "question": "What problem does ProCoach solve, and what was your role on it?",
+        "thirtySec": "ProCoach is a coaching marketplace where coaches, learners and parents can discover sessions, enroll, schedule and manage everything from role-specific dashboards. I owned the frontend end to end — architecture, components, and integration with the backend services.",
+        "ninetySec": "ProCoach solves the problem of connecting coaches with learners — and parents, when the learner is a minor — in one place: browsing available sessions, enrolling, scheduling around timezones, and paying through the platform. There are three distinct roles, each with a different dashboard and permission set. I was responsible for the entire frontend: the Next.js App Router architecture, the component and design system built with Tailwind and shadcn/ui, wiring up JWT/OTP authentication and role-based UI, and integrating Stripe for payments. I worked directly with backend REST services rather than building them myself.",
+        "deepDive": "The core complexity in ProCoach isn't any single screen — it's that the same product surface (sessions, dashboards, scheduling) behaves differently per role, and payments/timezones add real edge cases. I structured the frontend around feature folders rather than one global app state, so the enrollment flow, the scheduling flow and the payment flow each owned their own local state and only reached into shared context for auth/role information. That kept each workflow understandable in isolation instead of one large tangled store.",
+        "weak": "A weak answer just says \"I built a coaching platform\" without naming the three roles, the payment integration, or being specific about what \"owning the frontend\" actually meant day to day.",
+        "followUps": [
+          "Who were the other people working on this — was there a backend team, a designer?",
+          "How big was the codebase, roughly, in terms of major feature areas?"
+        ],
+        "honestyWarning": "Only describe backend collaboration, not backend ownership — you built and integrated the frontend against REST services, you did not say you built those services."
+      },
+      {
+        "id": "pc-g2",
+        "type": "generic",
+        "question": "What did you personally own on ProCoach, versus what was owned by others?",
+        "thirtySec": "I owned the entire frontend: architecture, UI components, state management, auth integration and payment UI. I did not own the backend services or infrastructure — I integrated against REST APIs that existed as separate services.",
+        "ninetySec": "My ownership was the frontend layer end to end: setting up the Next.js App Router structure, building the design system with Tailwind and shadcn/ui, implementing JWT/OTP-based authentication and role-based UI for coach/learner/parent, wiring up session discovery/enrollment/scheduling screens, and integrating Stripe Embedded Checkout and Connect surfaces for payments. Backend services — the REST APIs I consumed, and whatever handled OTP delivery, payment webhooks, and data persistence — were separate concerns I integrated with but did not build.",
+        "deepDive": "Ownership boundaries mattered a lot here because payments and auth are exactly the areas where frontend and backend responsibilities get blurry in an interview answer if you're not careful. On the frontend side, I decided the state shape for each feature, how errors from the REST services were normalized and displayed, how payment confirmation/loading/failure/retry states were represented in the UI, and how role information from the JWT translated into what a user could see and do. What I did not do was implement OTP generation/verification logic, payment webhook handling, or any database/service-level RBAC enforcement — those lived in the backend, and I always treated the frontend role checks as UX convenience, not security.",
+        "weak": "A weak answer blurs the line and implies you built or fully controlled the payment backend or OTP service — don't claim that.",
+        "followUps": [
+          "If the backend RBAC and the frontend RBAC disagreed, what would happen?",
+          "How did you find out the shape of the REST API you were integrating with — was there a contract/spec?"
+        ],
+        "honestyWarning": "Never claim you owned or secured the backend payment/auth logic — you consumed and integrated with it."
+      },
+      {
+        "id": "pc-g3",
+        "type": "generic",
+        "question": "How was the ProCoach frontend architected, and how did you break it into components?",
+        "thirtySec": "It was a Next.js App Router app organized by feature — session discovery, enrollment, scheduling, dashboards — each with its own components, rather than one flat components folder. Shared UI primitives came from shadcn/ui, styled with Tailwind.",
+        "ninetySec": "I organized the app by feature rather than by technical layer: session discovery, enrollment, scheduling and each role's dashboard were their own feature areas, each owning its components, hooks and local state. Cross-cutting concerns — auth context, the design system, shared API utilities — lived in shared modules that features imported from, not the other way around. shadcn/ui gave me accessible, composable primitives (dialogs, dropdowns, form controls) that I customized with Tailwind rather than building every primitive from scratch.",
+        "deepDive": "The architectural bet was: keep features independent so a change to the scheduling flow can't accidentally break the payment flow. Layouts in the App Router mapped naturally to this — a role-specific layout (coach/learner/parent) wrapped its own set of pages, and shared layouts handled things like the top nav and auth guard. For component design, I leaned on composition over configuration — for example, a SessionCard component that accepted children/slots for role-specific actions, rather than a single component with a dozen boolean props controlling every variant.",
+        "weak": "A weak answer says \"I used Next.js and components\" without describing any actual boundary or organizing principle.",
+        "followUps": [
+          "How did shared layouts differ between coach, learner and parent?",
+          "Did you use any component library conventions (like compound components) beyond shadcn/ui's defaults?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "pc-g4",
+        "type": "generic",
+        "question": "How did you manage state across ProCoach's different dashboards and workflows?",
+        "thirtySec": "I deliberately kept state feature-local instead of putting everything in one global store — auth/role info lived in a small shared context, but enrollment, scheduling and payment state stayed inside their own workflows.",
+        "ninetySec": "Rather than reaching for one large global state container, I treated most state as belonging to the feature that created it. Enrollment flow state, scheduling flow state, and payment confirmation state each lived close to where they were used, often as component or feature-level state, with React Query-style data fetching (or an equivalent fetch-and-cache pattern) for anything that mirrored server data. The only truly global piece was authentication/role state, exposed through context, because almost every feature needed to read \"who is logged in and what role are they\" without prop drilling.",
+        "deepDive": "This was a conscious trade-off: a single global store is tempting because it feels organized, but it couples unrelated features together and makes it harder to reason about what changes when. By keeping feature state local, a bug in the scheduling flow's state couldn't leak into the payment flow's state, and I could reason about each workflow in isolation when debugging. Server state (session lists, enrollment status) was treated differently from UI state (which step of a wizard you're on, whether a modal is open) — conflating those two is a common mistake I specifically avoided.",
+        "weak": "A weak answer says \"I used Context for everything\" or \"I used Redux\" without explaining why, or without distinguishing server state from UI state.",
+        "followUps": [
+          "Where exactly did you draw the line between \"goes in context\" and \"stays local\"?",
+          "How did you avoid prop drilling for role-based UI without over-using context?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "pc-g5",
+        "type": "generic",
+        "question": "How did ProCoach integrate with backend REST services, and how did you handle errors?",
+        "thirtySec": "ProCoach talked to multiple REST services, so I built a consistent API layer that normalized responses and errors, and every screen had explicit loading, error and empty states rather than assuming the happy path.",
+        "ninetySec": "Because ProCoach depended on multiple REST services rather than one monolithic API, I put effort into a consistent integration layer: a shared request wrapper that attached auth headers, normalized error shapes coming from different services (which didn't always agree on error format), and gave every data-fetching hook a predictable loading/error/success/empty shape. That meant a component consuming session data didn't need to know which service it came from — it just handled the same four states every other component did.",
+        "deepDive": "The multiple-services part is the real interview-worthy detail: different backend services occasionally returned errors in different shapes, so I normalized them at the boundary into one consistent error object (message, code, field-level errors where relevant) before they ever reached a component. For payments specifically, error handling had to be more careful — a failed payment call needed a clear retry path without risking a duplicate charge, so mutations were not blindly auto-retried the way a GET request might be.",
+        "weak": "A weak answer says \"I used try/catch\" without describing normalization across multiple services or without distinguishing safe-to-retry reads from unsafe-to-retry writes.",
+        "followUps": [
+          "How did the API layer handle a 401 partway through a session?",
+          "Did you use Axios interceptors, and what did they handle?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "pc-g6",
+        "type": "generic",
+        "question": "What were the most complex workflows in ProCoach, and how did you handle failure cases in them?",
+        "thirtySec": "Enrollment and scheduling were the most complex, because they combine role permissions, timezone-sensitive session times, and payment status all in one flow — each step needed its own explicit failure and retry handling.",
+        "ninetySec": "The enrollment-to-payment flow was the most complex: a learner or parent finds a session, enrolls, and pays — and each of those steps could fail independently. Scheduling added timezone sensitivity on top, since coaches, learners and parents could be in different timezones and the session time had to be displayed correctly and unambiguously for everyone. I made sure each step in the flow had its own explicit state (not just one big \"isLoading\" flag for the whole page) so a payment failure didn't look like an enrollment failure, and the user always knew exactly what had and hadn't succeeded.",
+        "deepDive": "For timezones, the rule I followed was: store and reason about times in UTC, and only convert to the viewer's local timezone at the display boundary — never do timezone math in the middle of business logic. For the enrollment/payment flow, I modeled each stage as its own status (enrolling, awaiting-payment, payment-processing, confirmed, failed) rather than a single boolean, which made it possible to show the right retry action at the right stage instead of a generic \"something went wrong\" message.",
+        "weak": "A weak answer treats timezones as \"just use the browser's timezone\" without acknowledging DST or coach/learner timezone mismatches, or collapses a multi-step flow into one loading state.",
+        "followUps": [
+          "How did you handle a session near a DST transition?",
+          "What did the UI show if payment succeeded but enrollment confirmation was delayed?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "pc-g7",
+        "type": "generic",
+        "question": "What did you do for performance and testing on ProCoach?",
+        "thirtySec": "Since it was statically hosted with dynamic workflows layered on top, I paid attention to what could be pre-rendered versus what had to stay client-driven, and I tested the riskiest flows — auth and payment — most carefully.",
+        "ninetySec": "For performance, the static-hosting constraint meant being deliberate about which parts of a page could be static and which needed client-side data. I kept client-side JavaScript scoped to the interactive pieces (forms, payment widgets, role-aware navigation) rather than making entire pages client components. For testing, I focused effort where the risk was highest — authentication flows and payment status handling — rather than spreading thin, equal test coverage across every screen.",
+        "deepDive": "I'm being honest here rather than overselling: testing coverage wasn't exhaustive across the whole app. Given real time constraints, I prioritized the flows where a bug would be worst for the user — a payment showing the wrong status, or a role seeing content it shouldn't. Performance-wise, the biggest lever was avoiding unnecessary client-side JavaScript given the static-hosting model, and being careful with image and font loading since those affect perceived load time the most on a marketing-adjacent, discovery-heavy product.",
+        "weak": "A weak answer claims comprehensive automated test coverage or specific performance numbers that were never actually measured.",
+        "followUps": [
+          "What testing tools did you use, if any?",
+          "What would you test first if you had one more week?"
+        ],
+        "honestyWarning": "Do not claim specific performance metrics (load time improvements, Lighthouse scores) or test coverage percentages that were never measured — describe the approach and priorities honestly instead."
+      },
+      {
+        "id": "pc-g8",
+        "type": "generic",
+        "question": "What trade-offs did you make on ProCoach, what would you improve today, and how did you collaborate with backend and other stakeholders?",
+        "thirtySec": "The biggest trade-off was static hosting for speed and simplicity versus the extra care needed for dynamic, role-based and payment workflows. Today I'd push earlier for a documented API contract with the backend to avoid integration surprises. I worked directly with backend developers to align on request/response shapes.",
+        "ninetySec": "Static hosting with dynamic workflows layered on top was a deliberate trade-off — it kept hosting simple and fast for the discovery-heavy parts of the product, at the cost of extra care needed for anything dynamic or role-specific, which had to be handled carefully client-side or via revalidation. Working with backend developers meant regularly clarifying the exact shape of REST responses, especially for payment status and role/permission data, since assumptions there directly caused frontend bugs. If I rebuilt it today, I'd push for an agreed API contract (even a lightweight OpenAPI/TypeScript-types-shared approach) earlier, rather than discovering shape mismatches during integration.",
+        "deepDive": "The honest retrospective: static export is a great fit until a feature needs something dynamic that the export model fights against — and payment/timezone-sensitive scheduling are exactly those features. I'd likely reconsider a mixed rendering strategy (dynamic where it's truly needed, static everywhere else) rather than defaulting to static-first, now that I've seen where the friction actually showed up. On collaboration, the useful pattern was treating the backend team's API as a real interface — flagging shape changes early, and pushing back when an error response was inconsistent with other endpoints — rather than silently working around it in the frontend.",
+        "weak": "A weak answer either has no real trade-off to name, or claims to have made backend/infrastructure decisions that weren't actually the frontend's to make.",
+        "followUps": [
+          "Did you ever have to push back on an API design decision? What happened?",
+          "If you had a dedicated backend teammate from day one, what would you have asked them to change?"
+        ],
+        "honestyWarning": "Frame collaboration as influence and clarification, not as making backend architecture decisions yourself."
+      },
+      {
+        "id": "pc-s1",
+        "type": "specific",
+        "question": "Why Next.js for ProCoach?",
+        "thirtySec": "Next.js gave file-based routing, layouts for the different roles, and a path to mix static and dynamic rendering as needed — useful for a marketplace with discovery pages and role-specific dashboards.",
+        "ninetySec": "ProCoach needed both content-heavy, discovery-style pages (browsing coaches and sessions) and more dynamic, authenticated dashboard experiences for three different roles. Next.js let me use layouts to share structure per role, handle routing without hand-rolling a router, and choose rendering strategy per route instead of committing the whole app to one model. It also came with sensible defaults for image/font optimization, which mattered for the discovery pages.",
+        "deepDive": "The alternative would have been a plain React SPA with React Router — that works, but I'd have had to build layout nesting, route-based code splitting and any SSR/SSG capability by hand. Next.js's conventions removed that overhead and matched the shape of the product naturally: shared role layouts, nested routes for sub-flows like scheduling, and the option to statically render marketing/discovery pages while keeping authenticated areas dynamic.",
+        "weak": "A weak answer just says \"Next.js is popular\" or \"it's what I know\" without connecting it to ProCoach's actual routing/role/rendering needs.",
+        "followUps": [
+          "What would you have lost by using a plain React SPA instead?",
+          "Did you use any Next.js-specific optimization features directly (next/image, next/font)?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "pc-s2",
+        "type": "specific",
+        "question": "Why the App Router specifically, rather than the Pages Router?",
+        "thirtySec": "The App Router's nested layouts mapped directly onto ProCoach's role-based structure — a shared layout per role with nested pages underneath — and Server/Client Component separation let me keep more of the app server-rendered by default.",
+        "ninetySec": "The App Router's layout nesting was the deciding factor: coach, learner and parent each needed their own persistent navigation/shell, with pages nested underneath that shouldn't re-render the shared layout on every navigation. The Pages Router doesn't give you that natively. The App Router's Server/Client Component model also let me default to server-rendered where possible and only mark the truly interactive leaves (forms, payment widgets) as client components, which the Pages Router's all-client model doesn't offer.",
+        "deepDive": "Beyond layouts, the App Router's per-segment loading.tsx/error.tsx meant I could show a loading state for just the dashboard content while the shared shell stayed mounted, instead of a full-page spinner. That's a meaningfully better UX for a dashboard-heavy product where the user is switching between sections often.",
+        "weak": "A weak answer treats \"App Router\" and \"Pages Router\" as interchangeable, or can't explain what nested layouts actually buy you.",
+        "followUps": [
+          "Did you hit any App Router rough edges (e.g. around caching or client boundaries) that you had to work around?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "pc-s3",
+        "type": "specific",
+        "question": "Why keep feature-level state close to the workflow instead of a large global store?",
+        "thirtySec": "Because enrollment, scheduling and payment are largely independent workflows — coupling their state through one global store would make each harder to reason about and easier to break by accident.",
+        "ninetySec": "A global store optimizes for state that many unrelated parts of the app need at once. Most of ProCoach's state wasn't like that — it belonged to one workflow at a time. Keeping it feature-local meant I could open the enrollment flow's code and understand its entire state without checking what else in the app might be reading or writing to a shared store. The only state that genuinely was cross-cutting — auth/role — went into a small shared context instead.",
+        "deepDive": "This also paid off for change isolation: when the payment flow needed a new status value, that change stayed inside the payment feature's state and types, and nothing else in the app needed to know or care. A global store tends to invite exactly the kind of unrelated coupling that makes a change in one screen risk breaking another — and for a solo/small-team frontend, keeping that blast radius small mattered more than the theoretical convenience of one store.",
+        "weak": "A weak answer says \"global state is bad\" as a blanket rule without explaining the actual coupling risk it avoids, or without acknowledging that some cross-cutting state (auth) still needed to be shared.",
+        "followUps": [
+          "What would have pushed you toward a global store instead?",
+          "How did shared auth/role context avoid becoming a dumping ground for other state over time?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "pc-s4",
+        "type": "specific",
+        "question": "How did the coach/learner/parent RBAC work?",
+        "thirtySec": "The JWT carried role information, which drove both route-level access (which layouts/pages a role could reach) and UI-level rendering (which actions/sections were shown) — but the backend enforced permissions independently, since the frontend check is only UX.",
+        "ninetySec": "After JWT/OTP authentication, the token's role claim determined which role-specific layout and navigation the user saw, and components used that role to conditionally render actions — for example, only coaches could see session-management controls, only parents could see a linked learner's enrollment history. Route access was gated so a learner couldn't simply navigate to a coach-only URL and see coach-only data render. But I was always explicit, including in code review discussions, that this was a UX convenience — the backend independently enforced permission checks on every request, because a determined user can bypass any frontend-only gate.",
+        "deepDive": "The three-role model added a wrinkle beyond simple two-role RBAC: parents needed visibility into a linked learner's activity without having the learner's own permissions — a \"delegated, read-mostly\" access pattern rather than a strict role hierarchy. I modeled permissions as a small set of capability checks (canEnroll, canManageSessions, canViewLinkedLearner) derived from role plus relationship data, rather than hardcoding \"if role === coach\" checks scattered across components, which made the permission logic easier to audit in one place.",
+        "weak": "A weak answer implies the frontend RBAC is the actual security boundary, or can't explain how the parent role differed from a simple hierarchy.",
+        "followUps": [
+          "How would you audit all the places a role check happens, to make sure none were missed?",
+          "What happens in the UI if a JWT expires mid-session?"
+        ],
+        "honestyWarning": "Always state plainly that backend authorization enforcement is independent of and more important than any frontend role check."
+      },
+      {
+        "id": "pc-s5",
+        "type": "specific",
+        "question": "How was Stripe Embedded Checkout integrated?",
+        "thirtySec": "Stripe Embedded Checkout was mounted inside the enrollment flow so payment happened without a full redirect away from the product, and the frontend reacted to the checkout session's status rather than handling raw card data itself.",
+        "ninetySec": "I integrated Stripe's Embedded Checkout component into the enrollment flow so the payment UI lived inside ProCoach's own page rather than redirecting to a separate Stripe-hosted page. The frontend never touched raw card details — Stripe's embedded element handled that — and instead the frontend's job was creating a checkout session (via the backend), rendering the embedded element, and then reacting to the resulting status (success, failure, requires action) to move the enrollment flow forward or show a retry.",
+        "deepDive": "The key architectural point is that all sensitive payment operations and secret keys stayed server-side — the frontend only ever used Stripe's publishable key and the client-side embedded component, never a secret key. For Stripe Connect surfaces specifically, the frontend rendered coach-facing onboarding/status UI, but again the sensitive account-linking operations were backend-driven; the frontend's role was presenting status and guiding the coach through whatever step came next.",
+        "weak": "A weak answer suggests the frontend directly processed card numbers or held a Stripe secret key — both would be a real security red flag in an interview.",
+        "followUps": [
+          "Where does the Stripe secret key live, and why must it never reach the browser?",
+          "What did the Stripe Connect onboarding status UI look like for a coach mid-onboarding?"
+        ],
+        "honestyWarning": "Never suggest that any Stripe secret key or raw card data was handled in frontend code — Embedded Checkout is specifically designed so the frontend never touches either."
+      },
+      {
+        "id": "pc-s6",
+        "type": "specific",
+        "question": "How were payment success, failure and retry states handled?",
+        "thirtySec": "Each payment attempt had its own explicit status — pending, processing, succeeded, failed — displayed clearly, with a retry path for failures that didn't risk double-charging or double-booking the session.",
+        "ninetySec": "I modeled payment state as its own explicit status rather than a boolean, because \"loading\" isn't the same as \"Stripe is processing\" isn't the same as \"webhook confirmation pending.\" The UI reflected each of those distinctly, so a user waiting on webhook confirmation saw a clear \"confirming your payment\" state rather than either a stuck spinner or a false success message. On failure, the retry path re-initiated a new checkout session rather than blindly resubmitting the same one, to avoid ambiguous double-submission states.",
+        "deepDive": "One subtlety worth mentioning: because Stripe payment confirmation can involve a webhook arriving asynchronously relative to the client-side redirect/response, the frontend couldn't always assume \"checkout returned success\" meant \"enrollment is fully confirmed.\" I treated the client-side result as provisional and the source of truth as whatever the backend considered confirmed (informed by the webhook), polling or re-fetching enrollment status briefly if needed rather than assuming the client-side result was final.",
+        "weak": "A weak answer assumes the client-side checkout result is always immediately authoritative and ignores the async nature of webhook-driven confirmation.",
+        "followUps": [
+          "What did the UI show during the gap between checkout redirect and webhook confirmation?",
+          "How did you avoid a user paying twice by clicking retry too fast?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "pc-s7",
+        "type": "specific",
+        "question": "How did having multiple API services affect the frontend architecture?",
+        "thirtySec": "I built a normalization layer so components never had to know which service a piece of data came from — consistent request/response/error shapes regardless of the underlying service.",
+        "ninetySec": "Multiple REST services meant inconsistent conventions were a real risk — different pagination shapes, different error formats, maybe different auth header expectations. I handled this by putting a thin API layer between the raw services and the rest of the app: each service got its own client module, but they all exposed the same normalized shape (data, error, loading) to the features that consumed them. That meant a feature like the dashboard, which might combine data from two services, didn't have to special-case each one.",
+        "deepDive": "This also mattered for resilience: if one service was slower or occasionally flaky, I could isolate that in its client module (timeouts, retries for safe GET requests) without that logic leaking into every component that happened to use that service. It also made it easier to reason about caching and revalidation per service, since they didn't necessarily share the same freshness requirements — session availability data needed to feel near-real-time, while a coach's profile data could tolerate more staleness.",
+        "weak": "A weak answer treats \"multiple services\" as a trivial detail rather than something that actively shaped the API layer's design.",
+        "followUps": [
+          "Did any two services ever disagree about the same piece of data? How did you resolve that?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "pc-s8",
+        "type": "specific",
+        "question": "How were timezone issues handled for sessions?",
+        "thirtySec": "Session times were stored and reasoned about in UTC everywhere in business logic, and converted to each viewer's local timezone only at the point of display.",
+        "ninetySec": "Because coaches, learners and parents could be in different timezones, I made sure every session time was stored and compared in UTC internally, and only converted to a human-readable, viewer-local time at the UI layer — never in the middle of scheduling logic. This avoided a whole class of bugs where a session looked like it was at a different time to different roles, or where date-only comparisons silently broke across a timezone boundary.",
+        "deepDive": "The trickiest part is daylight saving time transitions and displaying a time in a way that's unambiguous — I made sure the UI always showed the timezone abbreviation or offset alongside the time, rather than a bare \"3:00 PM\" that's ambiguous the moment two people are in different zones. Any date-only logic (like \"is this session today\") was computed against the viewer's local calendar day, not the UTC calendar day, since those can disagree near midnight.",
+        "weak": "A weak answer says \"we used the browser's timezone\" without addressing DST, without showing the offset/timezone in the UI, or without separating storage (UTC) from display (local).",
+        "followUps": [
+          "How would you test a session scheduled right across a DST transition?",
+          "What would you show if a coach and learner were about to have a session but their local \"now\" showed different dates?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "pc-s9",
+        "type": "specific",
+        "question": "What were the limitations of static export for ProCoach?",
+        "thirtySec": "Static export meant no server-side logic at request time, so anything requiring per-request dynamic data or secrets had to be handled client-side or via separate API calls, which added complexity for authenticated, role-specific and payment-related pages.",
+        "ninetySec": "Static export pre-renders pages at build time, which is great for discovery/marketing-style content but doesn't fit pages whose content depends on the logged-in user's role or real-time data. For ProCoach, that meant authenticated dashboards, role-specific views and payment status pages had to fetch their dynamic content client-side after the static shell loaded, rather than having it baked in or server-rendered per request. That's a real trade-off: faster/cheaper hosting, but more client-side data-fetching complexity and a brief \"shell then content\" loading state on every dynamic page.",
+        "deepDive": "It also constrained anything that would normally live in a Next.js server context — middleware-based redirects for auth, or server-only secrets used per request — since static export doesn't run a server at request time. Anything security-sensitive had to be enforced by the backend regardless, and the frontend's job became gracefully handling \"not yet authenticated\" or \"wrong role\" states client-side after the static page had already loaded, rather than preventing that content from ever being sent.",
+        "weak": "A weak answer doesn't know what static export actually gives up (no per-request server logic) and treats it as just \"a faster version of SSR\".",
+        "followUps": [
+          "If ProCoach dropped static export tomorrow, what would you change first?",
+          "How did you avoid a flash of \"wrong role\" content before the client-side auth check resolved?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "pc-s10",
+        "type": "specific",
+        "question": "How would the architecture change at larger scale?",
+        "thirtySec": "I'd reconsider static export in favor of a mixed rendering strategy, introduce a shared, documented API contract with the backend, and likely extract the design system and API client layer into their own packages if multiple products started sharing them.",
+        "ninetySec": "At larger scale, the static-export trade-off would likely stop paying for itself — I'd move authenticated and role-specific routes to dynamic rendering while keeping discovery/marketing pages static, using the App Router's per-route flexibility rather than an all-or-nothing choice. I'd also want a shared, typed contract between frontend and backend (generated types from an API schema) to remove the \"discovering the shape by testing it\" friction I mentioned earlier. If the multiple REST services grew further, I'd consider a thin BFF (backend-for-frontend) layer to aggregate and normalize them server-side instead of doing it entirely in the browser.",
+        "deepDive": "I'd be careful here not to overengineer preemptively — a BFF, a monorepo design system package, and a shared schema registry are all real costs (more infrastructure, more indirection) that only pay off once the pain they solve is actually being felt (e.g. multiple frontends needing the same normalized data, or type drift causing repeated bugs). The honest answer is: scale the architecture in response to concrete pain points you've actually hit, not in anticipation of hypothetical future ones.",
+        "weak": "A weak answer lists impressive-sounding infrastructure (microservices, GraphQL federation, a monorepo) without connecting each choice to a specific problem it would solve.",
+        "followUps": [
+          "What's the first concrete sign that static export was no longer the right choice?",
+          "How would you introduce a BFF without a big-bang rewrite?"
+        ],
+        "honestyWarning": null
+      }
+    ]
+  },
+  {
+    "id": "khetivalah",
+    "name": "KhetiValah",
+    "tagline": "Agriculture marketplace & event booking — React, TypeScript, Tailwind, Spring Boot REST APIs",
+    "context": "An agriculture marketplace and event-booking platform for vendors, sponsors, farmers, buyers and participants: product listings, stall booking, participant registration, Razorpay payments, GST billing/invoicing, OTP authentication and role-based routing.",
+    "stack": [
+      "React",
+      "TypeScript",
+      "Tailwind CSS",
+      "Spring Boot REST APIs (backend, consumed not built)",
+      "Razorpay",
+      "OTP auth",
+      "Role-based routing"
+    ],
+    "questions": [
+      {
+        "id": "kv-g1",
+        "type": "generic",
+        "question": "What problem does KhetiValah solve, and what was your role?",
+        "thirtySec": "KhetiValah is an agriculture marketplace and event-booking platform serving vendors, sponsors, farmers, buyers and participants — product listings, stall booking and event registration in one place. I built the frontend in React/TypeScript/Tailwind, integrating against Spring Boot REST APIs built by the backend team.",
+        "ninetySec": "KhetiValah brings together several distinct user types around agriculture commerce and events: vendors and sponsors listing products or sponsoring stalls, farmers and buyers trading, and participants registering for events. That range of roles meant a lot of role-based routing and permission logic. I owned the React/TypeScript frontend — catalog and listing UIs, stall booking and participant registration flows, Razorpay payment integration, GST billing/invoice interfaces, and OTP-based authentication — while the Spring Boot REST APIs were built and owned by the backend team.",
+        "deepDive": "The interesting complexity here is the breadth of roles compared to ProCoach's three — vendors, sponsors, farmers, buyers and participants each needed a somewhat different subset of the product surface, so role-based routing had to scale to more than a simple two-or-three-way branch. I approached it as a capability-based system (what can this role do) rather than hardcoding per-role page trees everywhere, which kept the routing logic maintainable as more role combinations came up.",
+        "weak": "A weak answer treats all these roles as interchangeable \"users\" without acknowledging how differently vendors, sponsors, farmers, buyers and participants actually use the product.",
+        "followUps": [
+          "Could a single person hold more than one role, e.g. both a farmer and a buyer?",
+          "How did you decide what counted as a distinct role versus a permission flag?"
+        ],
+        "honestyWarning": "The backend (Spring Boot APIs) was built by the backend team — describe your role as frontend integration and collaboration, not backend ownership."
+      },
+      {
+        "id": "kv-g2",
+        "type": "generic",
+        "question": "What did you personally own on KhetiValah?",
+        "thirtySec": "I owned the React/TypeScript frontend: catalog and listings, stall booking, participant registration, Razorpay checkout UI, GST billing/invoice screens, OTP auth flows and role-based routing — all integrated against Spring Boot REST APIs I did not build.",
+        "ninetySec": "My ownership covered the whole frontend surface: product/catalog listings, the stall booking and participant registration flows, the Razorpay payment UI and its confirmation/failure states, GST billing and invoice display, OTP-based login, and the role-based routing that determined what each user type could reach. The Spring Boot backend — the actual API implementations, database, and business rule enforcement — was owned by backend engineers; my job was consuming those APIs correctly and handling every state they could return.",
+        "deepDive": "Because GST billing and payments were involved, I was careful to keep the frontend's responsibility scoped to correctly displaying and collecting the data the backend needed (e.g. GST-relevant fields on a registration or purchase form) and correctly rendering whatever billing/invoice data the backend returned — not computing GST logic itself, which is a backend/compliance concern.",
+        "weak": "A weak answer implies you calculated GST or handled compliance logic in the frontend — that responsibility belongs on the backend, and claiming otherwise would be a red flag to a technical interviewer.",
+        "followUps": [
+          "Did the frontend ever have to validate GST-related fields before submission, and how did that differ from computing GST?"
+        ],
+        "honestyWarning": "Never claim the frontend computed or enforced GST/tax logic — that must be backend/compliance-owned; frontend only collects and displays."
+      },
+      {
+        "id": "kv-g3",
+        "type": "generic",
+        "question": "How did multi-role routing work in KhetiValah?",
+        "thirtySec": "Routing was capability-based: each role mapped to a set of allowed routes/actions, checked at both the route level (redirect if not permitted) and the UI level (hide actions the role can't take), backed by the Spring Boot API's own authorization.",
+        "ninetySec": "With five distinct role types, I avoided hardcoding \"if role === X\" checks scattered through the app and instead defined a small set of capabilities (canListProduct, canBookStall, canRegisterParticipant, canSponsorEvent, etc.) derived from role. Routes declared which capabilities they required, and a route guard redirected users lacking that capability, while navigation only showed links a user could actually use. This made adding a new role or adjusting permissions a matter of updating the capability mapping in one place rather than hunting through every route.",
+        "deepDive": "The reason capability-based routing scaled better than per-role route trees is that some actions were shared across roles (both a vendor and a sponsor might need to view certain stall information, for example) — modeling that as overlapping capabilities was much cleaner than duplicating route definitions per role or writing increasingly complex boolean conditions. As always, the frontend guard was about UX (don't show someone a dead end), while the Spring Boot backend independently enforced who could actually call which endpoint.",
+        "weak": "A weak answer describes routing as a flat list of \"if role is admin show this page\" checks without any reusable capability model, which doesn't scale past two or three roles.",
+        "followUps": [
+          "How did you handle a user with more than one role?",
+          "What happened if a route's required capability changed after a user was already on that page?"
+        ],
+        "honestyWarning": "State clearly that the Spring Boot backend enforced authorization independently — frontend routing is UX, not the security boundary."
+      },
+      {
+        "id": "kv-g4",
+        "type": "generic",
+        "question": "How did Razorpay checkout integration work?",
+        "thirtySec": "The frontend collected order/registration details, requested an order from the backend, opened Razorpay's checkout with that order id, and then handled the payment result by confirming status with the backend rather than trusting the client-side callback alone.",
+        "ninetySec": "Razorpay's flow requires creating an order server-side first, so the frontend's job was: gather the booking/purchase details, call the backend to create a Razorpay order, then launch Razorpay's checkout using the returned order id and the publishable key. On completion, Razorpay returns a client-side response, but I treated that as provisional and had the frontend confirm the final payment/booking status against the backend (which verifies the payment signature and webhook) before showing a final success state — never trusting the client-side callback alone as proof of payment.",
+        "deepDive": "This mirrors the same pattern as Stripe: secret keys and signature verification stayed backend-only, and the frontend's payment UI was built around explicit states (initiating, awaiting confirmation, confirmed, failed) rather than assuming the Razorpay checkout modal closing successfully meant the transaction was fully settled. For stall bookings specifically, this mattered because a booking shouldn't be marked confirmed until payment was actually verified, to avoid double-booking a stall based on an unconfirmed payment.",
+        "weak": "A weak answer assumes the Razorpay client-side success callback alone is sufficient proof of payment, or suggests handling the Razorpay secret/signature verification in the browser.",
+        "followUps": [
+          "What did the UI show while waiting for backend payment confirmation?",
+          "How did you prevent a stall from being double-booked if two people tried to pay for it at nearly the same time?"
+        ],
+        "honestyWarning": "Razorpay secret keys and signature verification must stay backend-only — never suggest otherwise."
+      },
+      {
+        "id": "kv-g5",
+        "type": "generic",
+        "question": "How did GST billing and payment states stay aligned?",
+        "thirtySec": "The frontend collected GST-relevant fields (like GSTIN where applicable) as part of the order/registration form and rendered whatever invoice/billing data the backend computed and returned — it never calculated tax amounts itself.",
+        "ninetySec": "GST billing needed to be accurate and compliant, which is a backend/business-logic responsibility, not a frontend one. My job was making sure the forms collected the right fields (GSTIN, billing address, applicable category) with proper validation, and that the invoice/billing screens correctly rendered whatever the backend computed — line items, tax breakdown, total — once payment was confirmed. Payment state and billing state had to visually agree: an invoice shouldn't appear as \"paid\" before the backend actually confirmed the corresponding payment.",
+        "deepDive": "The alignment problem was really a sequencing one: invoice generation depended on confirmed payment, so I made sure the UI didn't show a \"final\" invoice until the backend had actually marked the order paid — an early or optimistic invoice display would risk showing an unpaid transaction as billed. Where GST fields were optional (e.g. an individual buyer without a GSTIN) versus required (a registered vendor), the form validation reflected that conditionally rather than a one-size-fits-all rule.",
+        "weak": "A weak answer suggests the frontend computed GST amounts or generated the legal invoice itself — that's a backend/compliance responsibility.",
+        "followUps": [
+          "What happened if a payment succeeded but invoice generation was delayed on the backend?"
+        ],
+        "honestyWarning": "Never claim the frontend computed GST or generated compliant invoices independently — it collected input and rendered backend-computed output."
+      },
+      {
+        "id": "kv-g6",
+        "type": "generic",
+        "question": "How did booking reconciliation work between stall booking, product listings and event registration?",
+        "thirtySec": "Each workflow — stall booking, product listing, participant registration — was modeled as its own state machine with explicit statuses, and availability (like stall slots) was always re-checked against the backend at confirmation time, not just assumed from the last fetch.",
+        "ninetySec": "Because stalls and event slots are limited-availability resources, I couldn't treat \"the stall looked available when the page loaded\" as still true by the time payment completed — someone else could have booked it in between. So confirmation always re-validated availability against the backend rather than trusting client-side cached state, and if a stall became unavailable between selection and payment confirmation, the UI surfaced that clearly with a path back to choose another option rather than silently failing.",
+        "deepDive": "Separating these three workflows (booking, listing, registration) into distinct state models — rather than one generic \"transaction\" abstraction — made sense because their failure modes and constraints genuinely differed: a stall booking has slot-availability race conditions, a product listing doesn't, and participant registration might have its own capacity limits per event. Forcing them into one abstraction would have meant a lot of \"if this is actually a booking\" branching inside otherwise generic code.",
+        "weak": "A weak answer assumes availability shown on screen is still valid at payment time without re-checking, which would cause real double-booking bugs.",
+        "followUps": [
+          "What did the UI show if a stall became unavailable mid-checkout?",
+          "Did any of these three workflows share a component even though their state models differed?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "kv-g7",
+        "type": "generic",
+        "question": "How did the frontend work with the Spring Boot backend team day to day?",
+        "thirtySec": "I worked directly with backend developers to confirm API contracts, especially for payment status and GST-related fields, and flagged inconsistent error shapes or missing fields rather than silently working around them.",
+        "ninetySec": "Working against Spring Boot REST APIs meant regular back-and-forth on request/response shapes — particularly for anything involving Razorpay status or GST fields, where getting the contract wrong had real consequences. I made a habit of confirming exact field names, types and possible error codes with the backend team before building against assumptions, and flagging when two endpoints returned inconsistent shapes for similar data, since that inconsistency otherwise leaks into frontend workarounds that are easy to forget about later.",
+        "deepDive": "One recurring pattern was catching edge cases the initial API design hadn't considered from a UI point of view — for example, what the frontend should show while a Razorpay payment was verified asynchronously, or how a partially-completed registration should be represented. Raising these early, before they became \"the frontend just guesses\" situations, was part of working effectively with the backend team.",
+        "weak": "A weak answer implies the frontend silently worked around backend inconsistencies instead of raising and resolving them collaboratively.",
+        "followUps": [
+          "Give an example of an API contract change that came from frontend feedback."
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "kv-g8",
+        "type": "generic",
+        "question": "What trade-offs did you make on KhetiValah, and what would you improve today?",
+        "thirtySec": "I traded some short-term speed for capability-based routing instead of quick per-role hacks, which paid off as roles grew. Today I'd push for a shared, typed API contract with the backend earlier to reduce integration friction.",
+        "ninetySec": "Early on, it would have been faster to write per-role conditional rendering directly in components, but I invested in the capability-based routing/permission model instead, betting that the number of roles and their overlaps would keep growing — which it did. If I were doing it again, I'd formalize the API contract with the backend earlier (shared types or a schema-driven approach) rather than discovering field-shape mismatches during integration, especially around payment and GST data where mistakes are costly.",
+        "deepDive": "The honest retrospective is that the biggest recurring friction wasn't a frontend architecture problem — it was frontend/backend contract drift on the payment and billing fields specifically, exactly the areas where correctness matters most. A typed contract (even a manually maintained shared types file, if a full schema pipeline wasn't feasible) would have caught several of those mismatches at build time instead of in testing.",
+        "weak": "A weak answer has no genuine retrospective, or claims a technical improvement (like \"microservices\") that has nothing to do with the actual friction described.",
+        "followUps": [
+          "How would you introduce a shared types contract without blocking the backend team's velocity?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "kv-s1",
+        "type": "specific",
+        "question": "How did multi-role routing work end to end?",
+        "thirtySec": "Role plus a small capability map determined which routes and actions were available; a route guard redirected unauthorized access attempts, and navigation only rendered links the current user could use.",
+        "ninetySec": "Every route declared the capability it required rather than a specific role, and each role resolved to a set of capabilities. A shared route guard checked the current user's capabilities against the route's requirement on every navigation, redirecting to an appropriate fallback (login, or a \"not available for your role\" page) when it didn't match. Navigation menus were built from the same capability data, so a user never saw a link to somewhere they'd immediately get redirected away from.",
+        "deepDive": "This became especially useful when a user could hold multiple related roles or when new roles were introduced (sponsors, for instance, needed a subset of both vendor and event-organizer capabilities) — instead of writing a new branch of routing logic, I could compose capabilities for the new role type.",
+        "weak": "A weak answer describes a rigid per-role page tree that would need rewriting every time a new role or role combination was introduced.",
+        "followUps": [
+          "How did you test that a capability change didn't accidentally over-expose a route?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "kv-s2",
+        "type": "specific",
+        "question": "How did Razorpay checkout work in detail?",
+        "thirtySec": "Order creation happened on the backend; the frontend launched Razorpay checkout with that order id, then confirmed the final payment/booking status against the backend rather than trusting the client-side result alone.",
+        "ninetySec": "The flow was: user confirms a purchase/booking on the frontend, the frontend calls the backend to create a Razorpay order (this is required by Razorpay's model — orders can't be created client-side with just a publishable key), then the Razorpay checkout modal opens using that order id. When the modal resolves, the frontend does not treat that as final proof of payment — it calls the backend to confirm status, since the backend independently verifies the payment via Razorpay's signature/webhook mechanism.",
+        "deepDive": "I made sure failure and cancellation were handled distinctly from a pending/awaiting-confirmation state, since a user closing the Razorpay modal without paying is a different UI state from having paid but the backend not yet confirming it. This distinction mattered for stall bookings especially, where showing \"booking failed\" when it was actually \"still confirming\" would cause user confusion or duplicate attempts.",
+        "weak": "A weak answer collapses \"modal closed\" and \"payment confirmed\" into the same event.",
+        "followUps": [
+          "What if the user closed the browser tab before the confirmation call resolved — how would booking status eventually get reconciled?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "kv-s3",
+        "type": "specific",
+        "question": "How were GST billing and payment states kept aligned?",
+        "thirtySec": "Invoice/billing UI only rendered as final once the backend confirmed both GST calculation and payment — the frontend never showed a \"settled\" invoice ahead of backend confirmation.",
+        "ninetySec": "I treated invoice display as strictly downstream of confirmed payment state: the UI showed a provisional summary during checkout, but the actual GST-inclusive invoice only appeared once the backend returned a confirmed, computed invoice object. This avoided situations where a user might see billing details that later turned out to not match what was actually charged or registered.",
+        "deepDive": "Where GST-relevant input fields (like GSTIN) were involved, I applied conditional validation — required for certain user/registration types, optional for others — client-side, purely to catch obvious input mistakes early, while the backend remained the authority on whether a GSTIN was actually valid and what tax treatment applied.",
+        "weak": "A weak answer suggests the frontend validated GSTIN correctness/compliance itself rather than just basic input shape.",
+        "followUps": [
+          "What did the frontend do if the backend returned a GST-related validation error after submission?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "kv-s4",
+        "type": "specific",
+        "question": "How did booking reconciliation work for stalls and events?",
+        "thirtySec": "Availability was always re-validated against the backend at confirmation time rather than trusted from the initial fetch, specifically to avoid double-booking limited-availability stalls or event slots.",
+        "ninetySec": "Stall and event slots are a classic race-condition risk: two users could both see a slot as available and both attempt to book it. I made sure the final \"confirm booking\" step re-checked availability server-side and surfaced a clear message if the slot was taken in the meantime — rather than the frontend assuming its last fetched state was still accurate. This meant designing the booking UI to gracefully handle a \"no longer available\" response at the very last step, not just at initial load.",
+        "deepDive": "To keep this from feeling broken to the user, I made sure the \"no longer available\" case had a clear recovery path — showing the next best available slot or stall rather than just an error message and a dead end.",
+        "weak": "A weak answer assumes availability data is always accurate through the whole flow, ignoring the race condition inherent to limited-slot booking.",
+        "followUps": [
+          "How would you reduce the chance of this race condition happening in the first place, from the frontend side?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "kv-s5",
+        "type": "specific",
+        "question": "How did product, stall and event workflows stay separated in the codebase?",
+        "thirtySec": "Each was its own feature module with its own state model and components, sharing only genuinely common pieces (like a generic form field or a shared payment status component) rather than one large \"transaction\" abstraction.",
+        "ninetySec": "Even though products, stalls and events all eventually touch payment, I kept them as separate feature modules because their business rules differed meaningfully — stalls have slot availability and physical placement concerns, events have registration capacity and participant details, and products are simpler listing/purchase flows. Sharing only the genuinely reusable pieces (a payment status component, a generic form field, the API client) avoided forcing all three into one generic abstraction that would need constant special-casing.",
+        "deepDive": "This is a case where premature abstraction would have hurt more than helped — trying to build one \"universal booking\" component for products, stalls and events early on would likely have accumulated conditional branches faster than three separate, simpler modules did.",
+        "weak": "A weak answer either has no separation at all (one giant component) or over-abstracts prematurely into a generic system that doesn't fit any of the three well.",
+        "followUps": [
+          "What was the one piece of logic that was genuinely shared across all three, and how did you extract it?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "kv-s6",
+        "type": "specific",
+        "question": "How did the frontend work with Spring Boot REST APIs specifically?",
+        "thirtySec": "I built a typed API client layer against the Spring Boot endpoints, handled Spring's typical error response conventions consistently, and worked with the backend team to confirm contract details before building UI against assumptions.",
+        "ninetySec": "Spring Boot APIs tend to have their own conventions for validation errors and status codes, so I built a consistent client-side layer that normalized those into the same shape the rest of the frontend expected, rather than letting Spring-specific response quirks leak into every component. Where the API contract was ambiguous — especially for payment and GST-related endpoints — I confirmed details directly with the backend team rather than guessing, since incorrect assumptions there were the costliest to get wrong.",
+        "deepDive": "I also paid attention to how Spring Boot typically handled field-level validation errors (often returning a structured list of field/message pairs) and made sure forms could map those directly back onto the right input, rather than showing a generic top-level error message for what was actually a specific field problem.",
+        "weak": "A weak answer treats \"REST API\" as generic without acknowledging that different backend frameworks have different real-world conventions worth handling explicitly.",
+        "followUps": [
+          "How did you map a Spring Boot field-validation error response onto the right form field in the UI?"
+        ],
+        "honestyWarning": null
+      }
+    ]
+  },
+  {
+    "id": "rdrtech",
+    "name": "RDR Tech",
+    "tagline": "Audit & taxation workflow platform — React, TypeScript, Tailwind, Chart.js, WebSockets",
+    "context": "An audit and taxation workflow platform: tasks, approvals, documents and operational dashboards, with WebSocket-based real-time updates, role-aware workflow transitions, concurrent UI updates, and dense operational interfaces.",
+    "stack": [
+      "React",
+      "TypeScript",
+      "Tailwind CSS",
+      "Chart.js",
+      "WebSockets",
+      "Role-aware workflows"
+    ],
+    "questions": [
+      {
+        "id": "rdr-g1",
+        "type": "generic",
+        "question": "What problem does RDR Tech solve, and what was your role?",
+        "thirtySec": "RDR Tech is an audit and taxation workflow platform — tasks, approvals, documents and operational dashboards, with real-time updates via WebSockets. I built the React/TypeScript frontend, including the WebSocket-driven dashboards and Chart.js visualizations.",
+        "ninetySec": "RDR Tech supports an audit and taxation workflow: tasks move through stages, need approvals, attach documents, and the whole team needs visibility into what's happening operationally, often in near real time. I owned the frontend: the dense operational dashboards, task/approval UI, document-related screens, Chart.js-based visualizations, and the WebSocket integration that kept everyone's view current as tasks and approvals changed.",
+        "deepDive": "The core technical challenge here, compared to ProCoach or KhetiValah, was real-time concurrency — multiple people could be updating tasks and approvals simultaneously, and the UI had to reflect that without becoming inconsistent or janky. That pushed me to think carefully about how WebSocket events updated local state safely, rather than just appending every incoming event blindly.",
+        "weak": "A weak answer describes it as \"just another dashboard\" without acknowledging the real-time, multi-user concurrency angle that makes it different from the other projects.",
+        "followUps": [
+          "Roughly how many people would be looking at the same dashboard data at once?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "rdr-g2",
+        "type": "generic",
+        "question": "What did you personally own on RDR Tech?",
+        "thirtySec": "I owned the frontend: task/approval workflow UI, document-related screens, dashboards with Chart.js visualizations, and the WebSocket client integration for real-time updates.",
+        "ninetySec": "My scope was the full frontend: building the task and approval workflow screens (including role-aware transitions — who can move a task to which next state), document-related UI, operational dashboards with Chart.js charts, and the WebSocket layer that received and applied real-time events. The WebSocket server and the backend business logic for approvals were owned separately; my responsibility was consuming events correctly and reflecting them in the UI reliably.",
+        "deepDive": "A specific thing I owned was the reconciliation logic for incoming WebSocket events — deciding how an event should merge into existing local state (a task list, an approval queue) without creating duplicate entries or losing local optimistic changes that hadn't yet been confirmed by the server.",
+        "weak": "A weak answer implies you owned the WebSocket server or backend workflow engine, not just the client-side consumption of it.",
+        "followUps": [
+          "Did you write any part of the WebSocket server, or purely the client?"
+        ],
+        "honestyWarning": "Describe WebSocket work as client-side consumption/integration — do not claim ownership of the server-side WebSocket infrastructure unless that was actually true."
+      },
+      {
+        "id": "rdr-g3",
+        "type": "generic",
+        "question": "Why WebSockets for RDR Tech?",
+        "thirtySec": "Because audit/approval workflows needed near-real-time visibility across users — polling would either be too slow to feel current or too frequent to be efficient, so a persistent WebSocket connection made more sense.",
+        "ninetySec": "The workflow nature of the product — tasks moving through approval stages that multiple people care about simultaneously — meant staleness was a real usability problem: someone approving a task while looking at outdated status information is a genuine risk in an audit context. Polling on a short interval could approximate real time but wastes requests and still has a visible lag; WebSockets let the server push updates the moment something changed, which fit the operational, time-sensitive nature of audit workflows much better.",
+        "deepDive": "I was also mindful not to over-apply WebSockets everywhere — parts of the app that didn't need real-time freshness (e.g. static reference data) still used regular REST calls. The WebSocket connection was reserved for the genuinely time-sensitive slice of the product: task/approval status changes and any live document activity.",
+        "weak": "A weak answer says \"WebSockets are more modern than polling\" without connecting the choice to the actual freshness/concurrency requirement.",
+        "followUps": [
+          "What would you have lost by using short-interval polling instead?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "rdr-g4",
+        "type": "generic",
+        "question": "How did you handle WebSocket reconnection?",
+        "thirtySec": "The client tracked connection state explicitly (connected/reconnecting/disconnected), retried with backoff on drop, and re-synced state after reconnecting rather than assuming nothing had changed while disconnected.",
+        "ninetySec": "I modeled the WebSocket connection's status as its own piece of UI state, shown to the user (so they'd know if they were looking at potentially stale data), and implemented reconnection with exponential backoff rather than immediate rapid retries that could hammer the server. On successful reconnection, the client didn't just resume listening for new events — it also re-fetched or reconciled current state, since events that occurred while disconnected would otherwise be silently missed.",
+        "deepDive": "The reconnection-plus-resync pattern was the important part: a naive reconnect that just re-opens the socket and waits for the next event leaves a gap for anything that happened during the disconnected window. I treated \"just reconnected\" as a trigger to re-sync a snapshot of relevant state, then resume applying incremental events from that point.",
+        "weak": "A weak answer describes only the reconnect-the-socket part and misses the need to reconcile missed events after a disconnect.",
+        "followUps": [
+          "How long would you wait before showing the user a \"you may be viewing stale data\" warning?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "rdr-g5",
+        "type": "generic",
+        "question": "What happens when duplicate or out-of-order events arrive?",
+        "thirtySec": "Every event carried an identifiable id/version, so duplicate events were ignored idempotently, and events were applied in a way that respected their sequence rather than assuming arrival order matched occurrence order.",
+        "ninetySec": "I couldn't assume WebSocket events would always arrive exactly once and in order — network conditions and reconnects make that unsafe to assume. Each event carried enough information (an id, and ideally a version or timestamp) to let the client detect \"I've already applied this\" and skip it, making event application idempotent. For ordering, where an event included a version/sequence number for the entity it affected, I applied it only if it represented a newer state than what was already held locally, rather than blindly overwriting with whatever arrived last in wall-clock time.",
+        "deepDive": "This is essentially last-writer-wins based on a logical version rather than arrival time, which matters because network delivery order isn't guaranteed to match the order events were generated on the server. Without this, a slightly delayed \"task moved to draft\" event arriving after a newer \"task approved\" event could incorrectly roll back the UI's view of the task's status.",
+        "weak": "A weak answer assumes WebSocket delivery is reliable and ordered, and doesn't design for duplicates or reordering at all.",
+        "followUps": [
+          "What field(s) would you add to an event payload specifically to make this safe?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "rdr-g6",
+        "type": "generic",
+        "question": "How did concurrent updates affect the UI, and how did you handle role-aware workflow transitions?",
+        "thirtySec": "Multiple users acting on the same task concurrently meant the UI needed to reflect the latest server-confirmed state gracefully, and workflow transitions were gated by role/permission so the UI only offered actions a user's role could actually perform.",
+        "ninetySec": "Concurrency showed up as: two people looking at the same task, one approves it, the other's screen needs to reflect that promptly and without a jarring layout shift or losing their place. I handled that by updating just the affected task's state in place (not re-rendering or re-sorting the whole list unnecessarily) when a relevant event arrived. For workflow transitions, each task had a defined set of valid next states depending on the current user's role — an auditor might be able to submit a task for review, but only a reviewer role could approve it — and the UI only rendered the actions valid for both the task's current state and the user's role.",
+        "deepDive": "I modeled workflow status as a small state machine (allowed transitions per current state and role) rather than open-ended status strings with ad hoc \"can this role do this\" checks scattered around, which made it much easier to reason about and to keep the UI's available actions in sync with what the backend would actually accept.",
+        "weak": "A weak answer re-renders or reorders an entire list on every incoming event, which causes visible jank and lost scroll position — a common real mistake worth explicitly avoiding.",
+        "followUps": [
+          "How did you avoid a task jumping around in a sorted list every time a minor field updated via WebSocket?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "rdr-g7",
+        "type": "generic",
+        "question": "How did you organize dense operational dashboard data?",
+        "thirtySec": "I grouped dashboard data into independent widgets, each fetching/updating its own slice of data with its own loading/error state, using Chart.js for visualizations, rather than one large monolithic dashboard component.",
+        "ninetySec": "Dense dashboards are risky to build as one giant component — a single bug or slow query can take down the whole view. I broke the dashboard into independent widgets (tasks-by-status chart, pending-approvals count, recent-document-activity list, etc.), each responsible for its own data and its own loading/error/empty state, composed together on the page. Chart.js handled the visualizations, wrapped in a thin React component layer that managed chart instance lifecycle (creating/destroying/updating the chart correctly as data changed) since Chart.js itself isn't React-aware.",
+        "deepDive": "A specific detail worth mentioning: Chart.js instances need careful lifecycle management in React — recreating a chart on every render is wasteful and can leak, so I made sure updates went through Chart.js's own update methods where possible, only fully recreating the chart instance when the chart's type or fundamental structure changed, not on every data refresh.",
+        "weak": "A weak answer treats Chart.js as a drop-in React component without acknowledging it manages its own canvas/instance lifecycle that React doesn't know about.",
+        "followUps": [
+          "How did you decide chart type (bar/line/pie) for different kinds of audit data?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "rdr-g8",
+        "type": "generic",
+        "question": "What would you improve about RDR Tech today, and how would you test its real-time behaviour?",
+        "thirtySec": "I'd formalize the event schema (versioning, required fields) more explicitly to make reconciliation logic less ad hoc, and testing real-time behavior would rely on a mock WebSocket server that can simulate drops, duplicates and out-of-order delivery.",
+        "ninetySec": "If I revisited RDR Tech today, I'd push for a more formal, documented event schema (with explicit id/version/timestamp fields on every event type) rather than whatever ad hoc shape evolved feature by feature — that would make the reconciliation logic more predictable and easier to test. For testing real-time behavior specifically, the honest gap is that WebSocket-driven UI is hard to test without a mock server that can simulate realistic failure modes — I'd prioritize building or adopting a way to simulate reconnects, duplicate events and out-of-order delivery in tests, rather than relying purely on manual QA against a live connection.",
+        "deepDive": "Real-time UI bugs are notoriously hard to reproduce manually because they depend on timing, so investing in a deterministic mock WebSocket layer for tests would have been worth the upfront cost — being honest, that's more test infrastructure than what actually existed.",
+        "weak": "A weak answer claims comprehensive automated real-time test coverage that wasn't actually built, or has no genuine improvement to suggest.",
+        "followUps": [
+          "What would a mock WebSocket test harness need to simulate to be useful here?"
+        ],
+        "honestyWarning": "Be honest that comprehensive automated tests for WebSocket edge cases were a gap, not an existing strength — describe it as an improvement area."
+      },
+      {
+        "id": "rdr-s1",
+        "type": "specific",
+        "question": "Why WebSockets specifically, versus polling or server-sent events?",
+        "thirtySec": "WebSockets gave bidirectional, low-latency, push-based updates fitting a workflow where several roles act on the same tasks near-simultaneously — server-sent events would have covered the push-only need but WebSockets kept the option open for client-to-server real-time signals too.",
+        "ninetySec": "Polling adds latency and wasted requests; server-sent events are a reasonable push-only alternative, but WebSockets gave a consistent, bidirectional channel that could also carry lightweight client-to-server signals (like \"user is viewing this task\") if needed later, without switching transport mechanisms. Given the operational, multi-user nature of audit workflows, minimizing latency between an approval happening and every other viewer seeing it mattered more than the added complexity of managing a persistent connection.",
+        "deepDive": "This is also a good spot to show you know the trade-off isn't free — WebSockets need connection lifecycle management (the reconnection/backoff/resync logic already described) that polling and SSE don't need in the same way, so the choice was deliberate, not default.",
+        "weak": "A weak answer can't articulate what SSE or polling would have looked like as an alternative, making the WebSocket choice sound automatic rather than deliberate.",
+        "followUps": [
+          "If this were rebuilt today, would you reconsider SSE for simplicity?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "rdr-s2",
+        "type": "specific",
+        "question": "How did you handle reconnection in detail?",
+        "thirtySec": "Exponential backoff on reconnect attempts, a visible connection-status indicator, and a resync step after reconnecting to reconcile any events missed while disconnected.",
+        "ninetySec": "On disconnect, the client entered a \"reconnecting\" state (visible to the user rather than hidden), and retried with increasing delay between attempts rather than hammering the server immediately and repeatedly. Once reconnected, instead of just resuming to listen for new events, the client treated that moment as a trigger to re-fetch or re-sync the relevant current state, so any events that happened during the gap weren't silently lost.",
+        "deepDive": "I also capped the backoff (rather than letting delays grow unbounded) and made sure a long-disconnected user got a clear, honest indicator rather than a UI that silently looked fine while quietly being stale.",
+        "weak": "A weak answer retries immediately and repeatedly without backoff, which can worsen server load during an outage.",
+        "followUps": [
+          "What would the maximum backoff delay be, and why?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "rdr-s3",
+        "type": "specific",
+        "question": "What happens when duplicate or out-of-order events arrive, specifically?",
+        "thirtySec": "Idempotent application keyed by event id, and ordering respected via a version/sequence check per affected entity rather than trusting arrival order.",
+        "ninetySec": "Concretely: each event carried an id, so a simple \"have I seen this id\" check prevented double-applying a duplicate. For ordering, each affected entity (a task, an approval) had its own version or timestamp, and an incoming event was only applied if its version was newer than what the client currently held — otherwise it was discarded as stale, even if it had just arrived.",
+        "deepDive": "This shifts correctness from \"trust the network to deliver in order\" (which isn't guaranteed) to \"trust the data's own version,\" which is a much safer assumption to build real-time UI on.",
+        "weak": "A weak answer has no concrete mechanism and just says \"we handled it\" without describing id/version-based logic.",
+        "followUps": [
+          "What would you do if the backend genuinely couldn't provide a version/timestamp on events?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "rdr-s4",
+        "type": "specific",
+        "question": "How were workflow permissions represented in the UI?",
+        "thirtySec": "As a state machine of allowed next-statuses per role, so a task's available actions were computed from (current status × user role) rather than scattered conditional checks.",
+        "ninetySec": "I represented each workflow as a small explicit state machine: for a given current status, there's a defined set of valid next statuses, and each transition is gated by which roles are allowed to perform it. The UI computed available actions for a task by intersecting \"what transitions are valid from this status\" with \"what this user's role is allowed to do,\" rather than checking role conditions ad hoc in each button's render logic.",
+        "deepDive": "This also made it much easier to keep frontend and backend in agreement — the state machine definition became a natural thing to share or at least mirror between frontend and backend, reducing the chance the UI would offer an action the backend would then reject.",
+        "weak": "A weak answer has role checks duplicated across many components with no single source of truth for valid transitions.",
+        "followUps": [
+          "Did the frontend and backend ever disagree about a valid transition? How was that caught?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "rdr-s5",
+        "type": "specific",
+        "question": "How did you organize dense dashboard data specifically, beyond just \"widgets\"?",
+        "thirtySec": "Each widget owned its own data-fetching/WebSocket-subscription lifecycle and loading/error/empty state, so failures or slow data in one widget never blocked or broke the rest of the dashboard.",
+        "ninetySec": "Beyond just splitting into widgets visually, each widget managed its own async lifecycle independently — its own loading spinner, its own error-with-retry state, and, where relevant, its own subscription to the subset of WebSocket events it cared about. That isolation meant a slow or failing \"recent document activity\" widget didn't block the \"tasks by status\" chart from rendering, which matters a lot on a dashboard many people rely on throughout the day.",
+        "deepDive": "I also thought about update frequency per widget — not every widget needed to react to every event type, so widgets subscribed only to the event types relevant to them, reducing unnecessary re-renders across the dashboard when an unrelated event arrived.",
+        "weak": "A weak answer has one shared loading/error state for the whole dashboard, meaning one failure blanks out everything.",
+        "followUps": [
+          "How did you decide which WebSocket event types each widget should subscribe to?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "rdr-s6",
+        "type": "specific",
+        "question": "How would you test real-time behaviour in RDR Tech?",
+        "thirtySec": "With a mock WebSocket server/client that can script scenarios — disconnect mid-session, deliver duplicate events, deliver events out of order — since these are the failure modes that matter most and are hardest to trigger manually.",
+        "ninetySec": "Testing real-time behavior manually against a live connection can't reliably reproduce timing-dependent bugs, so the right approach is a mock WebSocket layer that lets tests script exact scenarios: send event A then a duplicate of A, or send an older-versioned event after a newer one, or simulate a disconnect mid-flow and verify the resync logic correctly reconciles state afterward. Each of the reconciliation rules described earlier (idempotency, version-based ordering, resync-after-reconnect) is specifically testable this way, because the mock gives full control over delivery order and timing that a real socket wouldn't.",
+        "deepDive": "Being honest, building this kind of mock harness is itself real engineering work that's easy to underinvest in under deadline pressure — which is exactly why I'd flag it as the top improvement area rather than claim it was already fully built out.",
+        "weak": "A weak answer says \"we'd write unit tests\" without describing what's actually hard to test here (timing, ordering, duplication) or how a mock would address it.",
+        "followUps": [
+          "What's the minimum mock WebSocket harness you'd build first, given limited time?"
+        ],
+        "honestyWarning": null
+      }
+    ]
+  },
+  {
+    "id": "sgreens",
+    "name": "SGreens ERP",
+    "tagline": "Poultry ERP — Angular, TypeScript, PrimeNG",
+    "context": "An ERP system for poultry production, inventory, purchases, sales, hatchery and accounts: reactive forms, large tables with pagination/filtering/search, JWT-aware REST integration, and role-based operational interfaces.",
+    "stack": [
+      "Angular",
+      "TypeScript",
+      "PrimeNG",
+      "Reactive Forms",
+      "JWT-aware REST integration"
+    ],
+    "questions": [
+      {
+        "id": "sg-g1",
+        "type": "generic",
+        "question": "What problem does SGreens ERP solve, and what was your role?",
+        "thirtySec": "SGreens ERP covers poultry production, inventory, purchases, sales, hatchery and accounts for the business — an operational system built with Angular, TypeScript and PrimeNG. I built the frontend: reactive forms, large tables, and role-based modules.",
+        "ninetySec": "SGreens ERP is an operational system covering the full poultry business — production, inventory, purchases, sales, hatchery operations and accounts — each a distinct module with its own forms and tables. I owned the Angular frontend: building reactive forms for data entry across these modules, large PrimeNG-based tables with pagination/filtering/search, and JWT-aware integration with REST APIs, all gated by role-based access per module.",
+        "deepDive": "What made this project distinct from the others is the sheer number of operational modules (production, inventory, purchases, sales, hatchery, accounts) each with their own tables and forms — the real engineering challenge was consistency and reuse across modules rather than any single complex workflow. A poorly reused table or form pattern here would multiply maintenance cost across six-plus modules instead of just one.",
+        "weak": "A weak answer describes it as \"a CRUD app\" without acknowledging the operational breadth (six-plus distinct business modules) that's the actual complexity driver.",
+        "followUps": [
+          "Which module had the most complex data relationships?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "sg-g2",
+        "type": "generic",
+        "question": "What did you personally own on SGreens ERP?",
+        "thirtySec": "I owned the Angular frontend across all modules: reactive forms, PrimeNG tables with pagination/filtering/search, JWT-aware API integration, and role-based module access.",
+        "ninetySec": "My ownership spanned the frontend for production, inventory, purchases, sales, hatchery and accounts modules — building consistent reactive forms and PrimeNG data tables across all of them, wiring up JWT-aware REST integration (attaching tokens, handling expiry), and implementing role-based access so different operational roles saw only their relevant modules. The backend APIs and business logic (like actual inventory calculations or accounting rules) were separate concerns I integrated with.",
+        "deepDive": "A specific piece of ownership worth naming: I built shared, reusable patterns (a common table component configuration, shared form validation patterns) precisely because six-plus modules with entirely separate, one-off implementations would have been a maintenance burden — that reuse decision was itself part of the frontend architecture work, not just \"building six separate features\".",
+        "weak": "A weak answer implies you built the actual inventory/accounting business logic rather than just the UI/integration layer for it.",
+        "followUps": [
+          "What was actually shared/reused across modules, concretely?"
+        ],
+        "honestyWarning": "Frame inventory/accounting calculations as backend-owned business logic that the frontend displays and collects input for, not something the frontend computed."
+      },
+      {
+        "id": "sg-g3",
+        "type": "generic",
+        "question": "How were large tables designed across SGreens ERP's modules?",
+        "thirtySec": "A shared, configurable table pattern built on PrimeNG — column definitions, server-side pagination, filtering and search passed as configuration — reused across modules instead of one-off tables per module.",
+        "ninetySec": "Rather than building a bespoke table per module, I built toward a shared table configuration pattern on top of PrimeNG's table component: each module supplied its column definitions, which fields were filterable/sortable, and how pagination should behave, while the underlying table behavior (rendering, selection, responsive handling) stayed consistent. This meant a fix or improvement to table behavior (like a better empty state or a performance tweak) benefited every module at once instead of needing to be repeated six-plus times.",
+        "deepDive": "Given the data volumes typical of ERP systems (inventory records, transaction history), pagination was generally server-side rather than client-side — fetching and rendering an entire large dataset client-side isn't practical at ERP scale, so filtering and sorting parameters were sent to the backend and the table rendered whatever page it returned.",
+        "weak": "A weak answer describes each module's table as built independently from scratch, missing the reuse/consistency angle that matters at this scale.",
+        "followUps": [
+          "How did you decide which modules could tolerate client-side pagination versus needing server-side?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "sg-g4",
+        "type": "generic",
+        "question": "Client-side versus server-side pagination — how did you decide, in general?",
+        "thirtySec": "For any module with genuinely large or growing datasets (inventory, transaction history), server-side pagination; for small, bounded reference lists, client-side was acceptable and simpler.",
+        "ninetySec": "The deciding factor was realistic data volume and growth: inventory and transactional data in an ERP can grow into the thousands or more records, where fetching everything client-side would be slow and wasteful — so those used server-side pagination, filtering and sorting, with the backend doing the heavy lifting. For smaller, more bounded lists — reference data that doesn't grow much — client-side pagination was simpler to implement and perfectly adequate, and I didn't force server-side complexity where it wasn't needed.",
+        "deepDive": "This is a good example of avoiding both extremes: defaulting everything to server-side pagination adds unnecessary complexity to small reference-data screens, while defaulting everything to client-side would break down badly on the genuinely large modules. The decision was made per-module based on actual expected data volume, not a blanket rule.",
+        "weak": "A weak answer picks one approach for the entire ERP without considering that different modules have very different data volume profiles.",
+        "followUps": [
+          "How would a module's pagination strategy need to change if its data volume grew 10x?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "sg-g5",
+        "type": "generic",
+        "question": "How were repeated forms and tables reused across SGreens ERP?",
+        "thirtySec": "Shared reactive form building blocks (common validators, reusable field groups) and a shared table configuration pattern meant each module composed from common pieces instead of duplicating form/table code six-plus times.",
+        "ninetySec": "I extracted the parts of forms and tables that repeated across modules — common validators (required fields, numeric ranges, date constraints), reusable field-group components (like an address block or a quantity/unit-of-measure pair), and the shared table configuration pattern already described — so each module's form or table was mostly configuration plus whatever was genuinely unique to that module, rather than a full rebuild.",
+        "deepDive": "The trade-off I was careful about was not over-abstracting: some fields looked similar across modules but had subtly different validation rules (a hatchery quantity field versus a sales quantity field, for instance), so I kept the shared pieces focused on things that were genuinely identical, and let module-specific logic stay in the module rather than adding configuration flags to a shared component for every small difference.",
+        "weak": "A weak answer either has no reuse (six separate implementations) or over-abstracts into one form component with dozens of configuration flags trying to cover every module's edge case.",
+        "followUps": [
+          "Give an example of two fields that looked similar across modules but you deliberately did NOT share."
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "sg-g6",
+        "type": "generic",
+        "question": "How was inventory consistency presented in the UI?",
+        "thirtySec": "Inventory figures were always displayed as backend-computed, authoritative values — the frontend didn't locally compute or cache stock levels across screens in a way that could drift from the source of truth.",
+        "ninetySec": "Given that inventory levels are affected by multiple modules (purchases increasing stock, sales decreasing it, production/hatchery affecting raw and finished stock), I made sure the frontend always treated the backend as the single source of truth for current inventory figures, re-fetching relevant data after any action that could change stock levels rather than optimistically adjusting a locally cached count that could silently drift from reality.",
+        "deepDive": "This is a case where optimistic UI updates — which I used elsewhere for less consequential state — were deliberately avoided, because showing an incorrect inventory figure, even briefly, in an operational ERP context is a worse outcome than a slightly slower, always-accurate refresh after a mutating action.",
+        "weak": "A weak answer applies the same optimistic-update pattern everywhere without recognizing that inventory correctness has a higher cost of being wrong than most other UI state.",
+        "followUps": [
+          "Were there any inventory-related screens where you did use optimistic updates, and why was that safe there but not elsewhere?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "sg-g7",
+        "type": "generic",
+        "question": "How did JWT-aware API integration work, and how were role-based modules controlled?",
+        "thirtySec": "A shared HTTP interceptor attached the JWT to requests and handled expiry/redirect-to-login centrally, and each operational role saw only the modules/actions their role granted, enforced independently by the backend as well.",
+        "ninetySec": "Angular's HTTP interceptor pattern was a natural fit for JWT handling — one interceptor attached the token to outgoing requests and handled a 401 (typically redirecting to login or attempting a refresh) centrally, so individual modules didn't need to repeat that logic. Role-based module access followed the same principle as the other projects: role determined which modules and actions appeared in the UI, but the backend independently enforced what each role could actually do — a purchasing-role user seeing only purchases and inventory modules was a UX convenience, not the actual security boundary.",
+        "deepDive": "Given the number of modules, I modeled role-to-module access as configuration data rather than scattering per-module role checks — a small map of role → allowed modules/actions that drove both navigation and route guards consistently.",
+        "weak": "A weak answer repeats JWT-attachment logic in every module's API calls instead of centralizing it in an interceptor, or implies frontend role gating is sufficient security.",
+        "followUps": [
+          "What did the interceptor do on a 401 specifically — silent refresh, or redirect to login?"
+        ],
+        "honestyWarning": "State clearly that backend enforcement of role-based permissions is independent of and required alongside frontend module gating."
+      },
+      {
+        "id": "sg-g8",
+        "type": "generic",
+        "question": "How would you modernize the Angular SGreens ERP frontend today?",
+        "thirtySec": "I'd evaluate a gradual move toward more modern Angular patterns (standalone components, signals) rather than a full rewrite, and I'd consider whether a React/Next.js rewrite is justified given my current stack depth — but only if the business case for a rewrite is real, not just for its own sake.",
+        "ninetySec": "A full rewrite is rarely the right first answer for a working ERP system that the business depends on daily — rewrites carry real risk and cost. I'd first look at modernizing incrementally within Angular: adopting newer patterns like standalone components and signals for more granular reactivity, tightening up the shared table/form abstractions based on what I've since learned works well, and improving type safety at the API boundary. A move to React/Next.js would only make sense if there were a concrete business driver — e.g. needing to share code/components with other products already built in React — not simply because it's the stack I now use more.",
+        "deepDive": "This question is really testing whether a candidate defaults to \"rewrite it in my preferred stack\" reflexively, which is a red flag. The honest, senior answer is: assess the actual pain points in the current system first (are there real bugs, real performance issues, real developer-velocity problems), and only propose the level of change that pain actually justifies — incremental modernization is usually the right call for a stable, working ERP.",
+        "weak": "A weak answer jumps straight to \"rewrite it in React\" without justifying why the rewrite cost would be worth it for a working system.",
+        "followUps": [
+          "What would make a full rewrite actually justified here?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "sg-s1",
+        "type": "specific",
+        "question": "How were large tables designed, in more technical detail?",
+        "thirtySec": "A shared PrimeNG-based table wrapper accepted column definitions and server-side pagination/filter/sort parameters as configuration, keeping rendering and interaction behavior consistent across all six-plus modules.",
+        "ninetySec": "The wrapper component took a typed column definition array (field, header, sortable, filterType) and emitted pagination/sort/filter change events that the parent module translated into API query parameters, then passed the returned page of data and total count back down. This kept the table's internal behavior (rendering rows, handling column sort UI, pagination controls) identical everywhere, while each module retained full control over what its API call actually did with those parameters.",
+        "deepDive": "For very large modules, I also considered virtualization for smoother scrolling on big pages, though the primary defense against large-data performance problems was server-side pagination itself — keeping the actually-rendered row count bounded per page rather than relying on virtualization to handle an unbounded dataset.",
+        "weak": "A weak answer has each module's table independently handling pagination/sort/filter logic with no shared contract.",
+        "followUps": [
+          "What did the column definition type look like?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "sg-s2",
+        "type": "specific",
+        "question": "Client-side versus server-side pagination — walk through a concrete example from SGreens ERP.",
+        "thirtySec": "Inventory transaction history used server-side pagination given its growing volume; a reference table like unit-of-measure types used client-side pagination since it was small and static.",
+        "ninetySec": "Inventory transaction history is a good concrete example: it grows continuously as purchases, sales and production events occur, so fetching the entire history client-side would become slower and slower over time — server-side pagination, filtering by date range, and search by reference number were essential there. By contrast, something like a unit-of-measure or category reference list was small, changed rarely, and was more responsive to filter client-side instantly without a network round-trip per keystroke — so client-side pagination and filtering made more sense there.",
+        "deepDive": "The general principle: pick pagination strategy based on the data's actual growth trajectory and interaction needs, not as a blanket architectural decision applied everywhere — this is the kind of trade-off discussion senior interviewers want to hear reasoned through with a real example, not just a rule stated abstractly.",
+        "weak": "A weak answer can't give a concrete example from the actual system and stays entirely abstract.",
+        "followUps": [
+          "How would you migrate a module from client-side to server-side pagination if its data grew unexpectedly?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "sg-s3",
+        "type": "specific",
+        "question": "How were repeated forms and tables reused, with a concrete example?",
+        "thirtySec": "A shared quantity/unit-of-measure field group was reused across purchases, sales and inventory forms, each supplying its own validation range while sharing the same layout and accessibility behavior.",
+        "ninetySec": "A concrete example: several modules needed a \"quantity + unit of measure\" input pair — purchases, sales and inventory adjustments all used it, but each had different valid ranges and sometimes different unit options. I built it as one reusable field-group component that accepted validation rules and allowed units as configuration, so the layout, accessibility labeling and basic interaction behavior stayed consistent everywhere, while each module supplied what made its usage specific.",
+        "deepDive": "This is the right granularity for reuse — reusing the presentation and interaction pattern while letting business rules vary per usage, rather than either duplicating the whole field three times or trying to hardcode one \"true\" set of validation rules into a shared component that wouldn't fit every module.",
+        "weak": "A weak answer either has no concrete reused example or describes over-abstracted shared components trying to cover every module's exact business rule.",
+        "followUps": [
+          "How did each module supply its own validation rules to the shared component?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "sg-s4",
+        "type": "specific",
+        "question": "How was inventory consistency presented, with a concrete failure mode you avoided?",
+        "thirtySec": "By always re-fetching authoritative stock levels after any mutating action (a purchase, a sale) rather than locally decrementing/incrementing a cached count, avoiding a scenario where two near-simultaneous actions leave the displayed count wrong.",
+        "ninetySec": "A concrete failure mode to avoid: if the UI optimistically decremented a local stock count on a sale before the backend confirmed it, and a purchase from another screen or user happened around the same time, the locally adjusted number could drift from the real, backend-computed value. Instead, after any action that could affect inventory, I re-fetched the authoritative figure from the backend rather than computing the new value client-side, accepting a small delay in exchange for correctness.",
+        "deepDive": "This connects to a broader principle: optimistic UI is a good tool for state where a brief, self-correcting inconsistency is an acceptable cost (e.g. a like button), but it's the wrong tool where the displayed number is used to make real operational decisions, like whether there's enough stock to fulfill an order.",
+        "weak": "A weak answer can't name a concrete failure mode and just says \"we made sure it was accurate\" without explaining how.",
+        "followUps": [
+          "Would you ever use optimistic updates for inventory-adjacent UI, and where would the line be?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "sg-s5",
+        "type": "specific",
+        "question": "How did JWT-aware API integration work in Angular specifically?",
+        "thirtySec": "An HttpInterceptor attached the JWT to outgoing requests and centrally handled 401 responses (redirect to login or refresh), so individual services/components never handled auth headers directly.",
+        "ninetySec": "Angular's HttpInterceptor let me centralize JWT handling: it attached the Authorization header to every outgoing request and intercepted 401 responses to redirect to login (or attempt a token refresh, depending on what the backend supported), rather than each feature module's service needing to remember to attach the token or handle expiry itself. This also gave one place to add request/response logging or error normalization consistently across all modules.",
+        "deepDive": "Centralizing this in an interceptor also made it much easier to change auth behavior later — for example, adding refresh-token logic only required changing the interceptor, not every service across six-plus modules.",
+        "weak": "A weak answer has JWT attachment logic duplicated in each Angular service instead of centralized in an interceptor.",
+        "followUps": [
+          "What did you do if a 401 happened while a background request (not a user-initiated action) was in flight?"
+        ],
+        "honestyWarning": null
+      },
+      {
+        "id": "sg-s6",
+        "type": "specific",
+        "question": "How were role-based modules controlled in the Angular app?",
+        "thirtySec": "Route guards checked a role-to-module access map before allowing navigation into a module, and the same map drove which navigation links were shown — with the backend independently enforcing permissions on every request.",
+        "ninetySec": "I maintained a role → allowed-modules/actions configuration, and Angular route guards checked against it before allowing navigation into a module's routes, redirecting away if the current user's role didn't have access. The same configuration drove the navigation menu, so users never saw links into modules they couldn't access. As with every other project, this was explicitly a UX layer — the backend enforced authorization independently on every API call, regardless of what the frontend chose to show or hide.",
+        "deepDive": "Keeping this as configuration data (rather than scattered `if role === X` checks in guards and components) meant adding a new role or adjusting an existing role's access was a data change, not a code change across many files.",
+        "weak": "A weak answer scatters role checks ad hoc across guards and components with no single source of truth, or implies frontend gating alone is sufficient security.",
+        "followUps": [
+          "How would you audit that the role-to-module configuration matched what the backend actually enforced?"
+        ],
+        "honestyWarning": "Always state that backend authorization enforcement is required and independent of frontend route guards."
+      }
+    ]
+  }
+]
