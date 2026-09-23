@@ -16404,6 +16404,29 @@ function isLevelUnlocked(levelId){
   const q = ensureQuestState();
   return !!q.bossPassed[levelId-1];
 }
+
+/* ---------------------- player ranks (display only — never gate a level) --------------- */
+/* Purely cosmetic XP-threshold labels. Levels unlock only from bossPassed
+   (isLevelUnlocked above) and missions (levelRequirementsMet below) —
+   rank never appears in either check. */
+const PLAYER_RANKS = [
+  { min:0, title:'Frontend Recruit' },
+  { min:500, title:'Junior Contributor' },
+  { min:1500, title:'Frontend Engineer' },
+  { min:3000, title:'Confident Engineer' },
+  { min:4500, title:'Senior-Track Engineer' },
+  { min:6000, title:'Interview Sharp' },
+  { min:7000, title:'Interview Ready' },
+];
+function playerRank(xp){
+  let current = PLAYER_RANKS[0], next = null;
+  for(let i=0;i<PLAYER_RANKS.length;i++){
+    if(xp>=PLAYER_RANKS[i].min) current = PLAYER_RANKS[i];
+    else { next = PLAYER_RANKS[i]; break; }
+  }
+  return { title: current.title, next };
+}
+
 function levelRequirementsMet(level){
   const prog = levelMissionProgress(level);
   const missionsOk = prog.total===0 || prog.done===prog.total;
@@ -18671,6 +18694,96 @@ document.addEventListener('keydown', (e)=>{
 const QUEST_STATUS_LABEL = { locked:'Locked', available:'Available', in_progress:'In progress', boss_available:'Boss available', completed:'Completed', mastered:'Mastered' };
 const QUEST_STATUS_BADGE = { locked:'badge-neutral', available:'badge-outline', in_progress:'badge-intermediate', boss_available:'badge-accent', completed:'badge-basic', mastered:'badge-senior' };
 
+/* ---------------------- Continue Quest: smart routing ---------------------- */
+/* Priority: overdue revision > active unfinished mission > available boss
+   (not yet attempted today) > next unlocked-but-incomplete mission >
+   an unfinished daily quest. Returns {label, hash} or null once everything
+   is genuinely caught up. */
+function continueQuestTarget(){
+  const today = todayISO();
+  if(typeof getDueRevisionItems==='function'){
+    const overdue = getDueRevisionItems().filter(d=>d.nextReview<today);
+    if(overdue.length) return { label:`Revise: ${overdue[0].title} (overdue)`, hash:'revision' };
+  }
+
+  for(const level of QUEST_LEVELS){
+    if(!isLevelUnlocked(level.id)) continue;
+    for(const item of levelMissionList(level)){
+      if(item.type!=='topic') continue;
+      const m = getMissionProof(item.id);
+      if(m && m.opened && !m.completedAt){
+        return { label:`Continue mission: ${missionItemTitle(item)}`, hash:`quest-mission/${encodeURIComponent(level.id+'::'+item.id)}` };
+      }
+    }
+  }
+
+  for(const level of QUEST_LEVELS){
+    if(!isLevelUnlocked(level.id)) continue;
+    if(levelStatus(level)==='boss_available' && !bossAttemptedToday(level.id)){
+      return { label:`Boss battle: ${level.title}`, hash:`quest/${level.id}` };
+    }
+  }
+
+  for(const level of QUEST_LEVELS){
+    if(!isLevelUnlocked(level.id)) continue;
+    const prog = levelMissionProgress(level);
+    const next = prog.items.find(i=>!i.done);
+    if(next){
+      const hash = next.type==='topic' ? `quest-mission/${encodeURIComponent(level.id+'::'+next.id)}` : `${MISSION_TYPE_ROUTE[next.type]}/${encodeURIComponent(next.id)}`;
+      return { label:`Start mission: ${missionItemTitle(next)}`, hash };
+    }
+  }
+
+  const daily = todaysQuestsWithStatus().find(x=>!x.done);
+  if(daily) return { label:`Daily quest: ${daily.label}`, hash:'quest/map' };
+
+  return null;
+}
+
+/* ---------------------- Quest home screen (#quest) ---------------------- */
+function renderQuestHome(){
+  const q = ensureQuestState();
+  const rank = playerRank(q.xp||0);
+  const zonesCleared = QUEST_LEVELS.filter(l=>q.bossPassed[l.id]).length;
+  const target = continueQuestTarget();
+  const dailyQuests = todaysQuestsWithStatus();
+  const allDailyDone = dailyQuests.every(x=>x.done);
+
+  return `
+    <h1 class="page-title">Frontend Quest</h1>
+    <p class="page-sub">${escapeHtml(rank.title)} · ${q.xp||0} XP${rank.next? ` · ${rank.next.min-(q.xp||0)} XP to ${escapeHtml(rank.next.title)}` : ' · top rank reached'}</p>
+
+    <div class="card mt-16" style="text-align:center;padding:28px 16px;">
+      ${target ? `
+        <p class="small faint">Continue where you left off</p>
+        <h3 class="card-title mt-8">${escapeHtml(target.label)}</h3>
+        <a href="#${target.hash}" class="btn btn-primary mt-16" style="font-size:16px;padding:14px 28px;">Continue Quest →</a>
+      ` : `
+        <p class="small muted">You're caught up — nothing overdue, no bosses waiting.</p>
+        <a href="#quest/map" class="btn btn-primary mt-16">View zone map</a>
+      `}
+    </div>
+
+    <div class="grid grid-3 mt-16">
+      <div class="stat-card"><div class="stat-label">Total XP</div><div class="stat-value">${q.xp||0}</div></div>
+      <div class="stat-card"><div class="stat-label">Zones cleared</div><div class="stat-value">${zonesCleared}/10</div></div>
+      <div class="stat-card"><div class="stat-label">Streak</div><div class="stat-value">${STATE.meta.streak||0} days</div></div>
+    </div>
+
+    <div class="card mt-16">
+      <div class="flex justify-between items-center"><h3 class="card-title">Today's quests</h3>${allDailyDone?'<span class="badge badge-basic">All complete</span>':''}</div>
+      <ul class="mt-8">
+        ${dailyQuests.map(qq=>`<li class="small mt-8"><span aria-hidden="true">${qq.done?'☑':'☐'}</span> <span class="visually-hidden-label">${qq.done?'Done: ':'Not done: '}</span>${escapeHtml(qq.label)} <span class="faint">(+${qq.xp} XP)</span></li>`).join('')}
+      </ul>
+    </div>
+
+    <div class="flex justify-between items-center mt-16">
+      <a href="#quest/map" class="btn btn-ghost">View zone map</a>
+      ${(q.achievements&&q.achievements.length)? `<span class="small faint">${q.achievements.length} achievement${q.achievements.length===1?'':'s'} unlocked</span>` : ''}
+    </div>
+  `;
+}
+
 /* ---------------------- Quest Map ---------------------- */
 function renderXPGraph(){
   const days = [];
@@ -18789,16 +18902,16 @@ function renderMissionList(level){
 function renderQuestLevel(levelIdStr){
   const levelId = parseInt(levelIdStr,10);
   const level = QUEST_LEVELS.find(l=>l.id===levelId);
-  if(!level) return `<div class="empty-state">Level not found. <a href="#quest">Back to Quest Map</a></div>`;
+  if(!level) return `<div class="empty-state">Level not found. <a href="#quest/map">Back to Quest Map</a></div>`;
   const status = levelStatus(level);
   if(status==='locked'){
     return `<div class="empty-state"><h3 class="card-title">Level ${levelId} is locked</h3>
       <p class="small muted mt-8">Pass Level ${levelId-1}'s boss battle to unlock ${escapeHtml(level.title)}.</p>
-      <a href="#quest" class="btn btn-ghost mt-16">Back to Quest Map</a></div>`;
+      <a href="#quest/map" class="btn btn-ghost mt-16">Back to Quest Map</a></div>`;
   }
 
   return `
-    <a href="#quest" class="small">← Back to Quest Map</a>
+    <a href="#quest/map" class="small">← Back to Quest Map</a>
     <div class="flex justify-between items-center wrap gap-8 mt-8">
       <div><span class="small faint">Level ${level.id} · ${escapeHtml(level.zone)}</span><h1 class="page-title" style="margin-bottom:0;">${escapeHtml(level.title)}</h1></div>
       <span class="badge ${QUEST_STATUS_BADGE[status]}">${QUEST_STATUS_LABEL[status]}</span>
@@ -18814,7 +18927,11 @@ function renderQuestLevel(levelIdStr){
     </div>
   `;
 }
-ROUTES['quest'] = (param)=> param ? renderQuestLevel(param) : renderQuestMap();
+ROUTES['quest'] = (param)=>{
+  if(!param) return renderQuestHome();
+  if(param==='map') return renderQuestMap();
+  return renderQuestLevel(param);
+};
 
 /* ---------------------- Mission Player: Learn -> Recall -> Practise -> Complete ---------------------- */
 let missionRecallRevealed = {};
@@ -18822,7 +18939,7 @@ function renderMissionPlayer(param){
   const [levelIdStr, topicId] = (param||'').split('::');
   const level = QUEST_LEVELS.find(l=>l.id===parseInt(levelIdStr,10));
   const topic = findById(TOPICS, topicId);
-  if(!level || !topic) return `<div class="empty-state">Mission not found. <a href="#quest">Back to Quest Map</a></div>`;
+  if(!level || !topic) return `<div class="empty-state">Mission not found. <a href="#quest/map">Back to Quest Map</a></div>`;
   if(levelStatus(level)==='locked'){
     return `<div class="empty-state">This zone is locked. <a href="#quest/${level.id}">Back to ${escapeHtml(level.zone)}</a></div>`;
   }
