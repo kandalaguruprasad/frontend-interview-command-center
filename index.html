@@ -300,6 +300,34 @@
     }
     :root[data-theme="dark"] .toast, .toast{ }
 
+    /* ---------- XP popup (Frontend Quest) ---------- */
+    .xp-popup-stack{position:fixed;top:64px;right:18px;z-index:200;display:flex;flex-direction:column;gap:6px;max-width:280px;pointer-events:none;}
+    .xp-popup{
+      background:var(--accent);color:#fff;padding:8px 14px;border-radius:999px;font-size:12.5px;font-weight:700;
+      box-shadow:var(--shadow);opacity:1;transform:translateY(0);transition:opacity .4s ease, transform .4s ease;
+    }
+    .xp-popup-fade{opacity:0;transform:translateY(-8px);}
+
+    /* ---------- Quest map + level-up (Frontend Quest) ---------- */
+    .quest-map{display:flex;flex-direction:column;align-items:stretch;max-width:560px;margin:0 auto;}
+    .quest-map .card{width:100%;}
+    .quest-connector{width:2px;height:20px;background:var(--border-strong);margin:0 auto;}
+    .levelup-overlay{
+      position:fixed;inset:0;background:rgba(20,22,26,.6);z-index:300;
+      display:flex;align-items:center;justify-content:center;padding:16px;
+      animation:levelupFadeIn .25s ease;
+    }
+    .levelup-card{
+      background:var(--surface);border-radius:var(--radius-lg);padding:32px;text-align:center;
+      max-width:360px;width:100%;box-shadow:var(--shadow);
+      animation:levelupScaleIn .3s ease;
+    }
+    .levelup-title{font-size:28px;font-weight:800;color:var(--accent-text);letter-spacing:-0.02em;}
+    .levelup-zone{font-size:15px;font-weight:700;margin-top:8px;}
+    .levelup-sub{font-size:13px;color:var(--text-dim);margin-top:4px;}
+    @keyframes levelupFadeIn{from{opacity:0;}to{opacity:1;}}
+    @keyframes levelupScaleIn{from{opacity:0;transform:scale(.9);}to{opacity:1;transform:scale(1);}}
+
     /* ---------- Accordion / disclosure ---------- */
     .disclosure summary{cursor:pointer;font-weight:600;font-size:13px;padding:4px 0;list-style:none;}
     .disclosure summary::-webkit-details-marker{display:none;}
@@ -14951,6 +14979,93 @@ mkDay({ day:30, phase:'Interview Execution', difficulty:'senior',
 ];
 
 /* =========================================================================
+   DATA: Frontend Quest — 10 zones mapped onto the SAME real content as
+   Handbook mode (topics, coding problems, machine coding, system design,
+   projects, mock interview). No new learning content is invented here —
+   only the game layer (zone metadata, boss composition, unlock proof).
+   ========================================================================= */
+
+const QUEST_LEVELS = [
+  { id:1, zone:'HTML Village', title:'HTML Scout',
+    description:'Restore the foundation: semantic structure, forms and accessibility.',
+    topicCategory:'html',
+    requirements:{ topicPct:0.7 },
+    boss:{ type:'quiz', category:'html', duration:15,
+      description:'Defend an accessible registration form — 15 minutes of HTML/accessibility questions, no notes.' } },
+
+  { id:2, zone:'CSS Workshop', title:'CSS Builder',
+    description:'Rebuild the layout systems: box model, flexbox, grid, responsive design.',
+    topicCategory:'css',
+    requirements:{ topicPct:0.7 },
+    boss:{ type:'quiz', category:'css', duration:15,
+      description:'Defend a responsive dashboard layout — 15 minutes of CSS questions, no notes.' } },
+
+  { id:3, zone:'JavaScript Forest', title:'JavaScript Fighter',
+    description:'Sharpen core JavaScript: scope, closures, the event loop, promises.',
+    topicCategory:'javascript',
+    requirements:{ topicPct:0.7, codingRequired:6, codingPassRequired:4 },
+    boss:{ type:'coding', codingIds:['cp-09','cp-10','cp-11'],
+      description:'Implement map, filter and reduce from scratch — pass every test without hints.' } },
+
+  { id:4, zone:'TypeScript Armoury', title:'TypeScript Guardian',
+    description:'Forge type safety: generics, discriminated unions, API and form typing.',
+    topicCategory:'typescript',
+    requirements:{ topicPct:0.7, codingRequired:3, codingPassRequired:2 },
+    boss:{ type:'coding', codingIds:['cp-32','cp-33','cp-24'],
+      description:'Build a type-safe result wrapper, a generic pick utility and an immutable nested update — pass every test.' } },
+
+  { id:5, zone:'React City', title:'React Engineer',
+    description:'Rebuild the UI layer: hooks, rendering, forms, component architecture.',
+    topicCategory:'react',
+    requirements:{ topicPct:0.7, labsRequired:3 },
+    boss:{ type:'machinecoding', refId:'mc-09',
+      description:'Build a searchable, paginated, accessible data table in 60 minutes — then defend your design decisions.' } },
+
+  { id:6, zone:'Next.js Territory', title:'Next.js Architect',
+    description:'Restore routing and rendering: App Router, Server/Client Components, caching.',
+    topicCategory:'nextjs',
+    requirements:{ topicPct:0.7 },
+    boss:{ type:'systemdesign', refId:'sd-01',
+      description:'Design a Next.js-powered admin dashboard and defend every architecture decision.' } },
+
+  { id:7, zone:'Integration Zone', title:'Product Integrator',
+    description:'Wire the system to the outside world: REST, auth, RBAC, payments, WebSockets.',
+    topicCategory:'api',
+    requirements:{ topicPct:0.6 },
+    boss:{ type:'quiz', category:'api', duration:20,
+      description:'20 minutes of API, auth and payment questions — no notes, no hand-waving.' } },
+
+  { id:8, zone:'Architecture Tower', title:'Senior Frontend Architect',
+    description:'Prove senior judgment: state ownership, performance, testing, security trade-offs.',
+    topicCategory:'performance',
+    requirements:{ topicPct:0.6 },
+    boss:{ type:'systemdesign', refId:'sd-03',
+      description:'Design a scalable, multi-role marketplace frontend and defend every trade-off.' } },
+
+  { id:9, zone:'Project Arena', title:'Project Defender',
+    description:'Defend your four real projects against follow-up questions — no invented numbers, no backend ownership claims.',
+    requirements:{},
+    boss:{ type:'project',
+      description:'Survive follow-up questions on ProCoach, KhetiValah, RDR Tech and SGreens ERP.' } },
+
+  { id:10, zone:'Final Interview', title:'Interview Arena',
+    description:'The final gauntlet: a full mixed interview, timed and self-scored.',
+    requirements:{ minReadiness:40 },
+    boss:{ type:'mockinterview',
+      description:'Clear 15, 30, 45 and 60-minute mixed rounds. Final boss: 60 minutes, average self-score of at least 4/5, with no unanswered core project questions.' } },
+];
+
+const QUEST_ACHIEVEMENTS = [
+  { id:'first_blood', title:'First Blood', description:'Pass your first boss battle.', check: ctx=> ctx.bossesPassed>=1 },
+  { id:'no_notes_needed', title:'No Notes Needed', description:'Explain 10 concepts aloud.', check: ctx=> ctx.aloudCount>=10 },
+  { id:'clean_coder', title:'Clean Coder', description:'Solve 5 coding problems without hints.', check: ctx=> ctx.solvedNoHelpCount>=5 },
+  { id:'streak_keeper', title:'Streak Keeper', description:'Reach a 7-day preparation streak.', check: ctx=> ctx.streak>=7 },
+  { id:'halfway_hero', title:'Halfway Hero', description:'Pass the boss at Level 6.', check: ctx=> !!ctx.bossPassed[6] },
+  { id:'daily_disciplined', title:'Daily Discipline', description:'Complete all 3 daily quests in one day.', check: ctx=> ctx.dailyBonusClaimed },
+  { id:'quest_complete', title:'Quest Complete', description:'Pass the Level 10 final boss.', check: ctx=> !!ctx.bossPassed[10] },
+];
+
+/* =========================================================================
    FRONTEND INTERVIEW COMMAND CENTER
    Section: CORE — constants, state, storage, utils, router, shell, widgets
    ========================================================================= */
@@ -14986,7 +15101,17 @@ function defaultState(){
     activeMock: null,  // an in-progress mock session snapshot, so a refresh doesn't lose it (see 41_mock.js)
     dailyFlags: { date:null, explainedAloud:false, projectSpoken:false }, // today's Daily Output flags that aren't otherwise derivable from item state (see 30_bridge.js)
     recentSearches: [], // command palette history (see 47_search.js)
-    notes: {}          // freeform notes keyed by scope, used for generic textareas not tied to items collection (kept for future use)
+    notes: {},          // freeform notes keyed by scope, used for generic textareas not tied to items collection (kept for future use)
+    quest: {            // Frontend Quest game mode (see 50_quest_data.js / 51_quest.js) — same underlying data as Handbook mode, XP only from real actions
+      xp: 0,
+      xpLog: [],              // [{date, amount, reason}]
+      bossPassed: {},          // levelId -> true
+      bossAttempts: {},        // levelId -> [{date, score, passed}]  (or, for level 9/10, subId-qualified entries)
+      achievements: [],        // achievement ids unlocked
+      dailyQuests: { date:null, bonusClaimed:false },
+      aloudAwardedToday: { date:null, ids:[] },
+      aloudTotalCount: 0,      // lifetime count, for the "No Notes Needed" achievement
+    }
   };
 }
 
@@ -15141,6 +15266,24 @@ function setItemStatus(collection,id,status){
   if(it.history.length>30) it.history = it.history.slice(-30);
   touchStreak();
   saveState();
+  // Frontend Quest XP (see 51_quest_engine.js) — 'coding' is excluded here because
+  // its own finer-grained progress transitions in 35_coding.js award XP instead,
+  // to avoid double-counting the same action.
+  if(collection!=='coding' && typeof awardXP==='function'){
+    const wasAlreadyGood = previousStatus==='confident' || previousStatus==='mastered';
+    const isNowGood = status==='confident' || status==='mastered';
+    if(isNowGood){
+      const title = typeof itemTitle==='function' ? itemTitle(collection,id) : id;
+      if(collection==='machinecoding' || collection==='lab'){
+        if(!wasAlreadyGood) awardXP(100, `Practical task complete: ${title}`);
+      } else if(wasAlreadyGood){
+        awardXP(40, `Successfully revised: ${title}`);
+      } else {
+        awardXP(20, `Confidence gained: ${title}`);
+      }
+    }
+    if(collection==='project' && typeof checkProjectBossProgress==='function') checkProjectBossProgress();
+  }
 }
 function setItemNote(collection,id,text){
   const it = ensureItem(collection,id);
@@ -15400,6 +15543,7 @@ function enhanceInteractiveCards(root){
 const NAV_GROUPS = [
   { label:'Prepare', items:[
     {id:'dashboard', label:'Dashboard', glyph:'D'},
+    {id:'quest', label:'Frontend Quest', glyph:'FQ'},
     {id:'plan', label:'30-Day Plan', glyph:'P'},
     {id:'revision', label:'Revision Queue', glyph:'R'},
   ]},
@@ -15709,7 +15853,7 @@ function validateAndSanitizeBackup(parsed){
   const incoming = (parsed.state && typeof parsed.state==='object') ? parsed.state : parsed;
   if(!incoming || typeof incoming!=='object') return { ok:false, error:'This file has no recognizable app data inside it.' };
   if(parsed.app && parsed.app!=='Frontend Interview Command Center') return { ok:false, error:'This file is a backup from a different application.' };
-  const recognizedKeys = ['items','plan30','mock','meta','activeMock','notes','dailyFlags'];
+  const recognizedKeys = ['items','plan30','mock','meta','activeMock','notes','dailyFlags','quest','recentSearches'];
   const looksLikeOurState = recognizedKeys.some(k=> Object.prototype.hasOwnProperty.call(incoming,k));
   if(parsed.app!=='Frontend Interview Command Center' && !looksLikeOurState){
     return { ok:false, error:'This file doesn\'t look like a Frontend Interview Command Center backup — it has none of the expected fields (items, plan30, mock, meta).' };
@@ -15766,6 +15910,18 @@ function validateAndSanitizeBackup(parsed){
     sanitized.activeMock = incoming.activeMock;
   }
   if(incoming.notes && typeof incoming.notes==='object') sanitized.notes = incoming.notes;
+  if(Array.isArray(incoming.recentSearches)) sanitized.recentSearches = incoming.recentSearches.filter(r=>r && typeof r==='object' && typeof r.title==='string').slice(0,8);
+  if(incoming.quest && typeof incoming.quest==='object'){
+    const q = incoming.quest;
+    if(typeof q.xp==='number' && isFinite(q.xp)) sanitized.quest.xp = Math.max(0, Math.floor(q.xp));
+    if(Array.isArray(q.xpLog)) sanitized.quest.xpLog = q.xpLog.filter(e=>e && isValidDateStr(e.date) && typeof e.amount==='number').slice(-300);
+    if(q.bossPassed && typeof q.bossPassed==='object') sanitized.quest.bossPassed = q.bossPassed;
+    if(q.bossAttempts && typeof q.bossAttempts==='object') sanitized.quest.bossAttempts = q.bossAttempts;
+    if(Array.isArray(q.achievements)) sanitized.quest.achievements = q.achievements.filter(a=>typeof a==='string');
+    if(q.dailyQuests && typeof q.dailyQuests==='object') sanitized.quest.dailyQuests = q.dailyQuests;
+    if(q.aloudAwardedToday && typeof q.aloudAwardedToday==='object') sanitized.quest.aloudAwardedToday = q.aloudAwardedToday;
+    if(typeof q.aloudTotalCount==='number') sanitized.quest.aloudTotalCount = Math.max(0, Math.floor(q.aloudTotalCount));
+  }
 
   return { ok:true, state: sanitized, warnings, counts:{ items:itemsKept, plan:planKept, mock:mockKept } };
 }
@@ -16034,6 +16190,221 @@ function computeReadinessScore(){
     ]
   };
 }
+
+/* =========================================================================
+   Frontend Quest — XP engine, level/unlock computation, daily quests,
+   achievements. No rendering here (see 52_quest_pages.js).
+
+   XP is awarded ONLY from real actions (a recorded test run, a finished
+   mock session, an actual review outcome, an explain-aloud attempt) — never
+   from opening or reading a page. Every award site is listed in the block
+   comment at the bottom of this file.
+   ========================================================================= */
+
+function ensureQuestState(){
+  if(!STATE.quest) STATE.quest = {
+    xp:0, xpLog:[], bossPassed:{}, bossAttempts:{}, achievements:[],
+    dailyQuests:{date:null,bonusClaimed:false}, aloudAwardedToday:{date:null,ids:[]}, aloudTotalCount:0
+  };
+  return STATE.quest;
+}
+
+function awardXP(amount, reason){
+  if(!amount) return;
+  const q = ensureQuestState();
+  q.xp = (q.xp||0) + amount;
+  q.xpLog = q.xpLog||[];
+  q.xpLog.push({ date: todayISO(), amount, reason });
+  if(q.xpLog.length>300) q.xpLog = q.xpLog.slice(-300);
+  saveState();
+  showXPPopup(amount, reason);
+  checkAchievements();
+}
+
+function showXPPopup(amount, reason){
+  let stack = document.getElementById('xpPopupStack');
+  if(!stack){
+    stack = document.createElement('div');
+    stack.id = 'xpPopupStack';
+    stack.className = 'xp-popup-stack';
+    document.body.appendChild(stack);
+  }
+  const el = document.createElement('div');
+  el.className = 'xp-popup';
+  el.textContent = `+${amount} XP — ${reason}`;
+  stack.appendChild(el);
+  setTimeout(()=>{ el.classList.add('xp-popup-fade'); setTimeout(()=>el.remove(), 500); }, 1700);
+}
+
+/* ---------------------- derived counts (used by requirements + achievements) ---------------------- */
+function categoryTopicPct(category){
+  const ids = TOPICS.filter(t=>t.category===category).map(t=>t.id);
+  if(!ids.length) return 1;
+  const done = ids.filter(id=>{ const s=getItem('topic',id).status; return s==='confident'||s==='mastered'; }).length;
+  return done/ids.length;
+}
+function codingAttemptedCount(){
+  return CODING_PROBLEMS.filter(c=>{
+    const p = getItem('coding',c.id).codingProgress || 'not_viewed';
+    return ['attempted','tests_partial','solved_no_help','solved_with_hints'].indexOf(p)!==-1;
+  }).length;
+}
+function codingSolvedCount(){
+  return CODING_PROBLEMS.filter(c=>{
+    const p = getItem('coding',c.id).codingProgress || 'not_viewed';
+    return p==='solved_no_help' || p==='solved_with_hints';
+  }).length;
+}
+function codingSolvedNoHelpCount(){
+  return CODING_PROBLEMS.filter(c=> getItem('coding',c.id).codingProgress==='solved_no_help').length;
+}
+function labsConfidentCount(){
+  return LABS.filter(l=>{ const s=getItem('lab',l.id).status; return s==='confident'||s==='mastered'; }).length;
+}
+
+/* ---------------------- levels: unlock + requirement + status ---------------------- */
+function isLevelUnlocked(levelId){
+  if(levelId===1) return true;
+  const q = ensureQuestState();
+  return !!q.bossPassed[levelId-1];
+}
+function levelRequirementsMet(level){
+  const req = level.requirements||{};
+  if(req.topicCategory===undefined && level.topicCategory){ /* topicCategory lives on level, pct req in requirements */ }
+  const topicOk = !level.topicCategory || categoryTopicPct(level.topicCategory) >= (req.topicPct!=null?req.topicPct:0.7);
+  const codingOk = !req.codingRequired || (codingAttemptedCount()>=req.codingRequired && codingSolvedCount()>=(req.codingPassRequired||0));
+  const labsOk = !req.labsRequired || labsConfidentCount()>=req.labsRequired;
+  const readinessOk = !req.minReadiness || computeReadinessScore().total >= req.minReadiness;
+  return topicOk && codingOk && labsOk && readinessOk;
+}
+function levelAnyProgress(level){
+  if(level.topicCategory){
+    return TOPICS.some(t=> t.category===level.topicCategory && getItem('topic',t.id).status!=='not_started');
+  }
+  if(level.id===9){
+    return PROJECTS.some(p=> p.questions.some(q=> getItem('project',q.id).status!=='not_started'));
+  }
+  if(level.id===10){
+    return (STATE.mock.sessions||[]).length>0;
+  }
+  return false;
+}
+function bossAttemptedToday(levelId, subId){
+  const q = ensureQuestState();
+  const attempts = q.bossAttempts[levelId]||[];
+  return attempts.some(a=> a.date===todayISO() && (subId===undefined || a.subId===subId));
+}
+function bestBossScore(levelId){
+  const q = ensureQuestState();
+  const attempts = q.bossAttempts[levelId]||[];
+  return attempts.reduce((m,a)=>Math.max(m,a.score||0),0);
+}
+function levelStatus(level){
+  if(!isLevelUnlocked(level.id)) return 'locked';
+  const q = ensureQuestState();
+  if(q.bossPassed[level.id]) return bestBossScore(level.id)>=90 ? 'mastered' : 'completed';
+  if(levelRequirementsMet(level)) return 'boss_available';
+  return levelAnyProgress(level) ? 'in_progress' : 'available';
+}
+function recordBossAttempt(levelId, score, passed, subId, marksLevelComplete){
+  if(marksLevelComplete===undefined) marksLevelComplete = true;
+  const q = ensureQuestState();
+  q.bossAttempts[levelId] = q.bossAttempts[levelId]||[];
+  q.bossAttempts[levelId].push({ date: todayISO(), score, passed, subId: subId||null });
+  if(passed && marksLevelComplete) q.bossPassed[levelId] = true;
+  saveState(true);
+}
+
+/* ---------------------- daily quests ---------------------- */
+const QUEST_TEMPLATES = [
+  { id:'q_explain', label:'Explain one concept aloud', xp:30, check: ()=> !!getDailyFlags().explainedAloud },
+  { id:'q_coding2', label:'Attempt 2 coding problems', xp:50, check: ()=> todaysDailyOutput().find(i=>i.key==='coding').done },
+  { id:'q_revise', label:'Revise one item due for revision', xp:40, check: ()=> todaysDailyOutput().find(i=>i.key==='revise').done },
+  { id:'q_mock', label:'Complete one mock-interview session', xp:60, check: ()=> todaysDailyOutput().find(i=>i.key==='mock').done },
+  { id:'q_project', label:'Speak one project answer aloud', xp:30, check: ()=> !!getDailyFlags().projectSpoken },
+  { id:'q_lab', label:'Complete one React/Next.js lab', xp:40, check: ()=> todaysDailyOutput().find(i=>i.key==='react').done },
+  { id:'q_solve', label:'Solve one coding problem without help', xp:50, check: ()=> codingSolvedNoHelpCount()>0 },
+];
+function seededDayIndex(seedStr, mod){
+  let h = 0;
+  for(let i=0;i<seedStr.length;i++){ h = (h*31 + seedStr.charCodeAt(i)) >>> 0; }
+  return h % mod;
+}
+function todaysQuestTemplates(){
+  const today = todayISO();
+  const start = seededDayIndex(today, QUEST_TEMPLATES.length);
+  const picked = [];
+  for(let i=0;i<3;i++) picked.push(QUEST_TEMPLATES[(start+i*2)%QUEST_TEMPLATES.length]);
+  return picked;
+}
+function todaysQuestsWithStatus(){
+  return todaysQuestTemplates().map(t=> Object.assign({}, t, { done: t.check() }));
+}
+function checkDailyQuestBonus(){
+  const q = ensureQuestState();
+  const today = todayISO();
+  if(q.dailyQuests.date!==today){ q.dailyQuests = { date:today, bonusClaimed:false }; }
+  if(q.dailyQuests.bonusClaimed) return;
+  const quests = todaysQuestsWithStatus();
+  if(quests.every(x=>x.done)){
+    q.dailyQuests.bonusClaimed = true;
+    saveState();
+    awardXP(50, 'Daily quests complete!');
+  }
+}
+
+/* ---------------------- achievements ---------------------- */
+function questContext(){
+  const q = ensureQuestState();
+  return {
+    bossesPassed: Object.keys(q.bossPassed||{}).length,
+    bossPassed: q.bossPassed||{},
+    aloudCount: q.aloudTotalCount||0,
+    solvedNoHelpCount: codingSolvedNoHelpCount(),
+    streak: STATE.meta.streak||0,
+    dailyBonusClaimed: !!(q.dailyQuests && q.dailyQuests.bonusClaimed),
+  };
+}
+function checkAchievements(){
+  const q = ensureQuestState();
+  q.achievements = q.achievements||[];
+  const ctx = questContext();
+  let newly = [];
+  QUEST_ACHIEVEMENTS.forEach(a=>{
+    if(q.achievements.indexOf(a.id)===-1 && a.check(ctx)){
+      q.achievements.push(a.id);
+      newly.push(a);
+    }
+  });
+  if(newly.length){
+    saveState();
+    newly.forEach(a=> toast(`Achievement unlocked: ${a.title}`));
+  }
+  checkDailyQuestBonus();
+}
+
+/* ---------------------- explain-aloud XP (once per distinct prompt per day) ---------------------- */
+function awardAloudXPOnce(promptId){
+  const q = ensureQuestState();
+  const today = todayISO();
+  if(q.aloudAwardedToday.date!==today) q.aloudAwardedToday = { date:today, ids:[] };
+  if(q.aloudAwardedToday.ids.indexOf(promptId)!==-1) return;
+  q.aloudAwardedToday.ids.push(promptId);
+  q.aloudTotalCount = (q.aloudTotalCount||0) + 1;
+  saveState();
+  awardXP(10, 'Attempted an answer aloud');
+}
+
+/* =========================================================================
+   XP award sites (for reference — the only places XP is ever granted):
+   - 34_questions.js  explainAloudModal()      -> awardAloudXPOnce (10 XP)
+   - 35_coding.js     run-tests handler         -> attempted/partial/solved (20/30/40/60 XP)
+   - 10_core.js       setItemStatus()           -> confidence gained / successful revision (20/40 XP)
+   - 41_mock.js       finishMockSession()       -> session completed (120 XP)
+   - 52_quest_pages.js boss battle resolution   -> boss passed (150 XP)
+   Opening a page, a details/summary disclosure, or a model answer never
+   awards anything by itself.
+   ========================================================================= */
 
 /* =========================================================================
    PAGE: Dashboard (#dashboard)
@@ -16499,9 +16870,10 @@ PAGE_ACTIONS['toggle-answer'] = (data)=>{
 
 /* ---------------------- Explain-aloud modal (shared) ---------------------- */
 let explainTimer = null;
-function explainAloudModal(questionText, revealHtml, dailyFlag){
+function explainAloudModal(questionText, revealHtml, dailyFlag, promptId){
   let seconds = 20, phase = 'think';
   markDailyFlag(dailyFlag || 'explainedAloud');
+  if(promptId && typeof awardAloudXPOnce==='function') awardAloudXPOnce(promptId);
   openModal({
     title:'Explain aloud',
     bodyHtml:`<p class="small">${escapeHtml(questionText)}</p>
@@ -16527,7 +16899,7 @@ function explainAloudModal(questionText, revealHtml, dailyFlag){
 PAGE_ACTIONS['explain-aloud'] = (data)=>{
   const q = findById(QUESTIONS, data.id);
   if(!q) return;
-  explainAloudModal(q.question, `<p class="small"><strong>Model answer:</strong> ${nl2br(q.strong)}</p>`);
+  explainAloudModal(q.question, `<p class="small"><strong>Model answer:</strong> ${nl2br(q.strong)}</p>`, 'explainedAloud', 'question:'+q.id);
 };
 
 /* =========================================================================
@@ -16607,6 +16979,12 @@ function markCodingProgress(id, next){
     it.codingProgress = next;
     it.updatedAt = todayISO();
     saveState();
+    if(typeof awardXP==='function'){
+      const c = findById(CODING_PROBLEMS, id);
+      const title = c ? c.title : id;
+      const xpByProgress = { attempted:20, tests_partial:30, solved_with_hints:40, solved_no_help:60 };
+      if(xpByProgress[next]) awardXP(xpByProgress[next], `${CODING_PROGRESS_LABEL[next]}: ${title}`);
+    }
   }
 }
 
@@ -16691,6 +17069,15 @@ const CODING_WORKER_SOURCE = `
 self.onmessage = function(e){
   var code = e.data.code, functionName = e.data.functionName, tests = e.data.tests;
   function deepEqualJSON(a,b){ try{ return JSON.stringify(a) === JSON.stringify(b); }catch(err){ return a===b; } }
+  function reviveArgs(args){
+    if(!Array.isArray(args)) return args;
+    return args.map(function(a){
+      if(a && typeof a==='object' && typeof a.__fn__==='string'){
+        try{ return (0, eval)('(' + a.__fn__ + ')'); }catch(err){ return undefined; }
+      }
+      return a;
+    });
+  }
   var fn;
   try{
     var factory = new Function(code + '\\nreturn (typeof ' + functionName + ' !== "undefined") ? ' + functionName + ' : undefined;');
@@ -16717,7 +17104,8 @@ self.onmessage = function(e){
             return { pass: pass, desc: test.desc || 'Custom test', detail: pass ? '' : String(res) };
           });
         } else {
-          resultPromise = Promise.resolve(fn.apply(null, test.args)).then(function(actual){
+          var revivedArgs = reviveArgs(test.args);
+          resultPromise = Promise.resolve(fn.apply(null, revivedArgs)).then(function(actual){
             var pass = deepEqualJSON(actual, test.expected);
             return { pass: pass, desc: test.desc || ('Input: ' + JSON.stringify(test.args)), detail: pass ? '' : ('Expected ' + JSON.stringify(test.expected) + ', got ' + JSON.stringify(actual)) };
           });
@@ -16746,6 +17134,19 @@ function terminateActiveCodingWorker(){
   if(activeCodingWorkerUrl){ try{ URL.revokeObjectURL(activeCodingWorkerUrl); }catch(e){} activeCodingWorkerUrl = null; }
 }
 
+function serializeTestsForWorker(tests){
+  // postMessage uses the structured clone algorithm, which cannot carry live
+  // function values (needed by problems like map/filter/reduce, whose test
+  // args include a callback) — so any function arg is converted to its
+  // source text here and revived with eval() inside the worker instead.
+  return tests.map(t=>{
+    const copy = Object.assign({}, t);
+    if(Array.isArray(copy.args)){
+      copy.args = copy.args.map(a=> typeof a==='function' ? { __fn__: a.toString() } : a);
+    }
+    return copy;
+  });
+}
 function runCodingTestsInWorker(problem, code, onProgress){
   return new Promise((resolve)=>{
     terminateActiveCodingWorker();
@@ -16800,7 +17201,7 @@ function runCodingTestsInWorker(problem, code, onProgress){
       if(e.preventDefault) e.preventDefault();
     };
 
-    worker.postMessage({ code, functionName: problem.functionName, tests: problem.tests });
+    worker.postMessage({ code, functionName: problem.functionName, tests: serializeTestsForWorker(problem.tests) });
   });
 }
 
@@ -17213,7 +17614,7 @@ PAGE_ACTIONS['project-explain-aloud'] = (data)=>{
   let found = null;
   for(const p of PROJECTS){ const q = findById(p.questions, data.id); if(q){ found = q; break; } }
   if(!found) return;
-  explainAloudModal(found.question, `<p class="small"><strong>90-second answer:</strong> ${nl2br(found.ninetySec)}</p>`, 'projectSpoken');
+  explainAloudModal(found.question, `<p class="small"><strong>90-second answer:</strong> ${nl2br(found.ninetySec)}</p>`, 'projectSpoken', 'project:'+found.id);
 };
 
 /* =========================================================================
@@ -17332,7 +17733,7 @@ function persistMockSession(){
   saveState(true);
 }
 
-function startMockSession({categoryId, difficulty, duration, pressure}){
+function startMockSession({categoryId, difficulty, duration, pressure, questBoss}){
   const pool = shuffle(mockPoolFor(categoryId, difficulty));
   if(pool.length===0){
     toast('No questions available for this category and difficulty.');
@@ -17342,7 +17743,7 @@ function startMockSession({categoryId, difficulty, duration, pressure}){
   const questions = pool.slice(0, count);
   const now = Date.now();
   mockSession = {
-    categoryId, difficulty, duration, pressure,
+    categoryId, difficulty, duration, pressure: pressure || !!questBoss,
     questions,
     index: 0,
     answers: questions.map(q=>({ qid:q.id, question:q.question, answerText:'', selfScore:null, markedWeak:false, revealed:false })),
@@ -17351,6 +17752,9 @@ function startMockSession({categoryId, difficulty, duration, pressure}){
     paused:false,
     finished:false,
     startedAt: new Date(now).toISOString(),
+    // Boss battles (Frontend Quest) reuse this exact engine — see 52_quest_pages.js.
+    // Hearts are lost for revealing an answer before self-scoring it; 0 hearts ends the battle as a loss immediately.
+    questBoss: questBoss ? Object.assign({ hearts:3 }, questBoss) : null,
   };
   persistMockSession();
   startMockTimer();
@@ -17401,6 +17805,8 @@ function finishMockSession(){
   STATE.activeMock = null;
   touchStreak();
   saveState(true);
+  if(scored.length>0 && typeof awardXP==='function') awardXP(120, 'Mock interview completed');
+  if(mockSession.questBoss && typeof resolveQuestMockBoss==='function') resolveQuestMockBoss(mockSession);
   renderMockInto();
 }
 function renderMockInto(){
@@ -17477,8 +17883,9 @@ function renderMockRunning(){
       <button class="btn btn-primary mt-8" data-action="mock-finish">End session</button></div>`;
   }
   return `
+    ${s.questBoss? `<div class="warn-banner mb-8">BOSS BATTLE — ${'♥'.repeat(Math.max(0,s.questBoss.hearts))}${'♡'.repeat(Math.max(0,3-s.questBoss.hearts))} — reveal only after scoring yourself, or lose a heart.</div>` : ''}
     <div class="flex justify-between items-center wrap gap-8">
-      <h1 class="page-title" style="margin-bottom:0;">Mock Interview — ${escapeHtml((MOCK_CATEGORIES.find(c=>c.id===s.categoryId)||{}).label||'')}</h1>
+      <h1 class="page-title" style="margin-bottom:0;">${s.questBoss?'Boss Battle':'Mock Interview'} — ${escapeHtml((MOCK_CATEGORIES.find(c=>c.id===s.categoryId)||{}).label||s.categoryId)}</h1>
       <div class="input-row">
         <span class="badge badge-accent" id="mockTimer" aria-live="off">${fmtClock(Math.ceil(mockRemainingMs()/1000))}</span>
         ${!s.pressure? `<button class="btn btn-ghost btn-sm" data-action="mock-pause">${s.paused?'Resume':'Pause'}</button>` : ''}
@@ -17583,7 +17990,14 @@ PAGE_ACTIONS['mock-pause'] = ()=>{
   persistMockSession();
   renderMockInto();
 };
-PAGE_ACTIONS['mock-finish'] = ()=>{ saveCurrentAnswerText(); finishMockSession(); };
+PAGE_ACTIONS['mock-finish'] = ()=>{
+  saveCurrentAnswerText();
+  if(mockSession && mockSession.questBoss && mockSession.index+1 < mockSession.questions.length){
+    mockSession.questBoss.hearts = Math.max(0, mockSession.questBoss.hearts-1);
+    toast(`-1 heart: ended the battle early (${mockSession.questBoss.hearts} left)`);
+  }
+  finishMockSession();
+};
 PAGE_ACTIONS['mock-score'] = (data)=>{
   saveCurrentAnswerText();
   const a = currentMockAnswer();
@@ -17599,7 +18013,19 @@ PAGE_ACTIONS['mock-mark-weak'] = (data, el)=>{
 PAGE_ACTIONS['mock-reveal'] = ()=>{
   saveCurrentAnswerText();
   const a = currentMockAnswer();
-  if(a) a.revealed = true;
+  if(a){
+    if(mockSession.questBoss && a.selfScore===null && !a.revealed){
+      mockSession.questBoss.hearts = Math.max(0, mockSession.questBoss.hearts-1);
+      toast(`-1 heart: revealed before scoring yourself (${mockSession.questBoss.hearts} left)`);
+      if(mockSession.questBoss.hearts<=0){
+        a.revealed = true;
+        persistMockSession();
+        finishMockSession();
+        return;
+      }
+    }
+    a.revealed = true;
+  }
   persistMockSession();
   renderMockInto();
 };
@@ -17659,7 +18085,7 @@ ROUTES['hr'] = renderHR;
 
 PAGE_ACTIONS['hr-drill'] = ()=>{
   const h = HR_QUESTIONS[Math.floor(Math.random()*HR_QUESTIONS.length)];
-  explainAloudModal(h.question, `<p class="small"><strong>Detailed version for reference:</strong> ${nl2br(h.detailedVersion)}</p>`);
+  explainAloudModal(h.question, `<p class="small"><strong>Detailed version for reference:</strong> ${nl2br(h.detailedVersion)}</p>`, 'explainedAloud', 'hr:'+h.id);
 };
 
 /* =========================================================================
@@ -18085,6 +18511,407 @@ document.addEventListener('keydown', (e)=>{
     openCommandPalette();
   }
 });
+
+/* =========================================================================
+   Frontend Quest — pages (Quest Map, Level Detail) and boss battle flows.
+   Boss battles reuse the REAL underlying mechanisms already in the app:
+     quiz / mockinterview  -> the actual Mock Interview engine (41_mock.js)
+     coding                -> the actual Web Worker test runner (35_coding.js)
+     machinecoding / systemdesign -> an honest 5-criteria self-rating claim
+     project                -> the actual Project Defence tracking (39_projects.js)
+   ========================================================================= */
+
+const QUEST_STATUS_LABEL = { locked:'Locked', available:'Available', in_progress:'In progress', boss_available:'Boss available', completed:'Completed', mastered:'Mastered' };
+const QUEST_STATUS_BADGE = { locked:'badge-neutral', available:'badge-outline', in_progress:'badge-intermediate', boss_available:'badge-accent', completed:'badge-basic', mastered:'badge-senior' };
+
+/* ---------------------- Quest Map ---------------------- */
+function renderXPGraph(){
+  const days = [];
+  for(let i=13;i>=0;i--) days.push(addDaysISO(todayISO(), -i));
+  const q = ensureQuestState();
+  const totals = days.map(d=> (q.xpLog||[]).filter(e=>e.date===d).reduce((s,e)=>s+e.amount,0));
+  const max = Math.max(1, Math.max.apply(null, totals));
+  return `
+    <div class="card mt-16">
+      <h3 class="card-title">XP over the last 14 days</h3>
+      <div class="flex gap-6 mt-12" style="height:70px;align-items:flex-end;">
+        ${totals.map((t,i)=>`<div style="flex:1;display:flex;flex-direction:column;align-items:center;">
+          <div style="width:100%;background:var(--accent);border-radius:2px 2px 0 0;height:${Math.max(2,Math.round(t/max*60))}px;" title="${t} XP on ${fmtDateHuman(days[i])}"></div>
+        </div>`).join('')}
+      </div>
+      <p class="small faint mt-8">${fmtDateHuman(days[0])} – ${fmtDateHuman(days[13])}</p>
+    </div>
+  `;
+}
+function questZoneCardHtml(level){
+  const status = levelStatus(level);
+  const clickable = status!=='locked';
+  return `
+    <div class="card ${clickable?'clickable':''}" ${clickable?`data-nav="quest/${level.id}"`:''} style="${clickable?'cursor:pointer;':'opacity:.55;'}">
+      <div class="flex justify-between items-center">
+        <span class="small faint">Level ${level.id} · ${escapeHtml(level.zone)}</span>
+        <span class="badge ${QUEST_STATUS_BADGE[status]}">${QUEST_STATUS_LABEL[status]}</span>
+      </div>
+      <h3 class="card-title mt-8">${escapeHtml(level.title)}</h3>
+      <p class="small muted">${escapeHtml(level.description)}</p>
+      ${status==='locked'? `<p class="small faint mt-8">Pass Level ${level.id-1}'s boss to unlock.</p>` : ''}
+    </div>
+  `;
+}
+function renderQuestMap(){
+  const q = ensureQuestState();
+  const zonesCleared = QUEST_LEVELS.filter(l=>q.bossPassed[l.id]).length;
+  const dailyQuests = todaysQuestsWithStatus();
+  const allDailyDone = dailyQuests.every(x=>x.done);
+  return `
+    <h1 class="page-title">Frontend Quest</h1>
+    <p class="page-sub">Learn. Build. Defend. Level up. Same topics, questions, coding problems and mock interviews as Handbook mode — gated behind proof, not just XP.</p>
+
+    <div class="grid grid-3">
+      <div class="stat-card"><div class="stat-label">Total XP</div><div class="stat-value">${q.xp||0}</div></div>
+      <div class="stat-card"><div class="stat-label">Zones cleared</div><div class="stat-value">${zonesCleared}/10</div></div>
+      <div class="stat-card"><div class="stat-label">Streak</div><div class="stat-value">${STATE.meta.streak||0} days</div></div>
+    </div>
+
+    <div class="card mt-16">
+      <div class="flex justify-between items-center"><h3 class="card-title">Today's quests</h3>${allDailyDone?'<span class="badge badge-basic">All complete</span>':''}</div>
+      <ul class="mt-8">
+        ${dailyQuests.map(qq=>`<li class="small mt-8"><span aria-hidden="true">${qq.done?'☑':'☐'}</span> <span class="visually-hidden-label">${qq.done?'Done: ':'Not done: '}</span>${escapeHtml(qq.label)} <span class="faint">(+${qq.xp} XP)</span></li>`).join('')}
+      </ul>
+    </div>
+
+    ${renderXPGraph()}
+
+    <h2 class="section-title">Zone map</h2>
+    <div class="quest-map mt-8">
+      ${QUEST_LEVELS.map((l,i)=>`${questZoneCardHtml(l)}${i<QUEST_LEVELS.length-1? '<div class="quest-connector" aria-hidden="true"></div>' : ''}`).join('')}
+    </div>
+
+    ${(q.achievements&&q.achievements.length)? `
+    <h2 class="section-title">Achievements</h2>
+    <div class="input-row wrap">${q.achievements.map(id=>{ const a=QUEST_ACHIEVEMENTS.find(x=>x.id===id); return a? `<span class="badge badge-senior" title="${escapeHtml(a.description)}">${escapeHtml(a.title)}</span>`:''; }).join('')}</div>
+    ` : ''}
+  `;
+}
+
+/* ---------------------- Level Detail ---------------------- */
+function renderLevelExtraRequirements(level){
+  const req = level.requirements||{};
+  const parts = [];
+  if(req.codingRequired){
+    const attempted = Math.min(codingAttemptedCount(), req.codingRequired);
+    parts.push(`<div><div class="flex justify-between small"><span>Coding problems attempted</span><span>${codingAttemptedCount()}/${req.codingRequired}</span></div><div class="progress-track mt-8"><div class="progress-fill" style="width:${pct(attempted,req.codingRequired)}%"></div></div></div>`);
+    const solved = Math.min(codingSolvedCount(), req.codingPassRequired||0);
+    parts.push(`<div class="mt-8"><div class="flex justify-between small"><span>Coding problems solved</span><span>${codingSolvedCount()}/${req.codingPassRequired}</span></div><div class="progress-track mt-8"><div class="progress-fill" style="width:${pct(solved,req.codingPassRequired||1)}%"></div></div></div>`);
+  }
+  if(req.labsRequired){
+    const done = Math.min(labsConfidentCount(), req.labsRequired);
+    parts.push(`<div class="mt-8"><div class="flex justify-between small"><span>Labs completed</span><span>${labsConfidentCount()}/${req.labsRequired}</span></div><div class="progress-track mt-8"><div class="progress-fill" style="width:${pct(done,req.labsRequired)}%"></div></div></div>`);
+  }
+  if(req.minReadiness){
+    const r = computeReadinessScore().total;
+    parts.push(`<div class="mt-8"><div class="flex justify-between small"><span>Overall readiness score</span><span>${r}%/${req.minReadiness}%</span></div><div class="progress-track mt-8"><div class="progress-fill" style="width:${pct(Math.min(r,req.minReadiness),req.minReadiness)}%"></div></div></div>`);
+  }
+  if(!parts.length) return '';
+  return `<div class="card mt-16"><h3 class="card-title">Proof required to unlock the boss</h3>${parts.join('')}</div>`;
+}
+function renderQuestLevel(levelIdStr){
+  const levelId = parseInt(levelIdStr,10);
+  const level = QUEST_LEVELS.find(l=>l.id===levelId);
+  if(!level) return `<div class="empty-state">Level not found. <a href="#quest">Back to Quest Map</a></div>`;
+  const status = levelStatus(level);
+  if(status==='locked'){
+    return `<div class="empty-state"><h3 class="card-title">Level ${levelId} is locked</h3>
+      <p class="small muted mt-8">Pass Level ${levelId-1}'s boss battle to unlock ${escapeHtml(level.title)}.</p>
+      <a href="#quest" class="btn btn-ghost mt-16">Back to Quest Map</a></div>`;
+  }
+  const missions = level.topicCategory ? TOPICS.filter(t=>t.category===level.topicCategory) : [];
+  const missionsDone = missions.filter(t=>{ const s=getItem('topic',t.id).status; return s==='confident'||s==='mastered'; }).length;
+
+  return `
+    <a href="#quest" class="small">← Back to Quest Map</a>
+    <div class="flex justify-between items-center wrap gap-8 mt-8">
+      <div><span class="small faint">Level ${level.id} · ${escapeHtml(level.zone)}</span><h1 class="page-title" style="margin-bottom:0;">${escapeHtml(level.title)}</h1></div>
+      <span class="badge ${QUEST_STATUS_BADGE[status]}">${QUEST_STATUS_LABEL[status]}</span>
+    </div>
+    <p class="page-sub">${escapeHtml(level.description)}</p>
+
+    ${missions.length? `
+    <div class="card">
+      <div class="flex justify-between items-center"><h3 class="card-title">Missions</h3><span class="small faint">${missionsDone}/${missions.length} confident or better</span></div>
+      <div class="progress-track mt-8"><div class="progress-fill" style="width:${pct(missionsDone,missions.length)}%"></div></div>
+      <div class="grid grid-3 mt-12">
+        ${missions.map(t=>{ const it=getItem('topic',t.id); return `<div class="card clickable" data-nav="topics/${encodeURIComponent(t.id)}" style="cursor:pointer;"><span class="status-dot status-${it.status}"></span><h3 class="card-title mt-8" style="font-size:13px;">${escapeHtml(t.title)}</h3></div>`; }).join('')}
+      </div>
+    </div>` : ''}
+
+    ${renderLevelExtraRequirements(level)}
+
+    <div class="card mt-16">
+      <h3 class="card-title">Boss battle</h3>
+      <p class="small muted">${escapeHtml(level.boss.description)}</p>
+      ${renderBossCard(level, status)}
+    </div>
+  `;
+}
+ROUTES['quest'] = (param)=> param ? renderQuestLevel(param) : renderQuestMap();
+
+/* ---------------------- Boss card dispatch ---------------------- */
+function renderBossCard(level, status){
+  if(status!=='boss_available' && status!=='completed' && status!=='mastered'){
+    return `<div class="empty-state mt-8">Complete the missions and proof requirements above to unlock this boss.</div>`;
+  }
+  const passed = !!ensureQuestState().bossPassed[level.id];
+  if(passed && level.boss.type!=='mockinterview' && level.boss.type!=='project'){
+    return `<div class="good-banner mt-8">Boss defeated — best score ${bestBossScore(level.id)}%.</div>`;
+  }
+  switch(level.boss.type){
+    case 'quiz': return renderQuizBossCard(level);
+    case 'coding': return renderCodingBossCard(level);
+    case 'machinecoding': case 'systemdesign': return renderClaimBossCard(level);
+    case 'project': return renderProjectBossCard(level);
+    case 'mockinterview': return renderMockinterviewBossCard(level);
+    default: return '';
+  }
+}
+
+/* quiz type: launches a real scoped mock-interview session */
+function renderQuizBossCard(level){
+  const attemptedToday = bossAttemptedToday(level.id);
+  const attempts = ensureQuestState().bossAttempts[level.id]||[];
+  const last = attempts[attempts.length-1];
+  return `
+    <p class="small mt-8">${level.boss.duration} minutes · ${escapeHtml(CATEGORY_LABEL[level.boss.category]||level.boss.category)} questions · pressure mode (no pause) · 3 hearts.</p>
+    ${last? `<p class="small faint mt-8">Last attempt: ${last.score}% (need 70%) on ${fmtDateHuman(last.date)}${last.passed?' — passed':''}</p>` : ''}
+    ${attemptedToday
+      ? `<div class="warn-banner mt-8">Already attempted today. Retry tomorrow.</div>`
+      : `<button class="btn btn-primary mt-8" data-action="quest-start-quiz-boss" data-level="${level.id}">Start boss battle</button>`}
+  `;
+}
+function bestAvailableDifficulty(category){
+  for(const d of ['senior','intermediate','basic']){
+    if(mockPoolFor(category,d).length>0) return d;
+  }
+  return 'all';
+}
+PAGE_ACTIONS['quest-start-quiz-boss'] = (data)=>{
+  const level = QUEST_LEVELS.find(l=>l.id===parseInt(data.level,10));
+  if(!level) return;
+  const difficulty = bestAvailableDifficulty(level.boss.category);
+  const started = startMockSession({ categoryId: level.boss.category, difficulty, duration: level.boss.duration, pressure:true, questBoss:{ levelId: level.id } });
+  if(started) navigate('mock-interview');
+};
+
+/* coding type: solve specific real coding problems */
+function codingBossProgress(level){
+  const ids = level.boss.codingIds;
+  const solved = ids.filter(id=>{ const p=getItem('coding',id).codingProgress; return p==='solved_no_help'||p==='solved_with_hints'; }).length;
+  return { solved, total: ids.length, pct: Math.round(solved/ids.length*100) };
+}
+function renderCodingBossCard(level){
+  const prog = codingBossProgress(level);
+  const q = ensureQuestState();
+  const passed = !!q.bossPassed[level.id];
+  return `
+    <div class="flex flex-col gap-8 mt-8">
+      ${level.boss.codingIds.map(id=>{
+        const c = findById(CODING_PROBLEMS, id);
+        const p = getItem('coding', id).codingProgress || 'not_viewed';
+        const solved = p==='solved_no_help'||p==='solved_with_hints';
+        return `<div class="item-row"><span class="small" style="cursor:pointer;" data-nav="javascript-coding/${id}">${escapeHtml(c?c.title:id)}</span><span class="badge ${solved?'badge-basic':'badge-outline'}">${CODING_PROGRESS_LABEL[p]}</span></div>`;
+      }).join('')}
+    </div>
+    <div class="progress-track mt-12"><div class="progress-fill ${prog.pct>=70?'good':''}" style="width:${prog.pct}%"></div></div>
+    <p class="small muted mt-8">${prog.solved}/${prog.total} solved (need 70%)</p>
+    ${passed? `<div class="good-banner mt-8">Boss defeated — ${prog.pct}% solved.</div>`
+      : prog.pct>=70? `<button class="btn btn-primary mt-8" data-action="quest-claim-coding-boss" data-level="${level.id}">Claim boss victory</button>`
+      : `<p class="small faint mt-8">Solve at least 70% of these to claim victory.</p>`}
+  `;
+}
+PAGE_ACTIONS['quest-claim-coding-boss'] = (data)=>{
+  const level = QUEST_LEVELS.find(l=>l.id===parseInt(data.level,10));
+  if(!level) return;
+  const prog = codingBossProgress(level);
+  if(prog.pct<70) return;
+  recordBossAttempt(level.id, prog.pct, true);
+  awardXP(150, `Boss battle passed: ${level.title}`);
+  triggerLevelUp(level);
+  navigate('quest/'+level.id);
+};
+
+/* machinecoding / systemdesign type: honest 5-criteria self-rating claim */
+const BOSS_CLAIM_CRITERIA = [
+  { key:'technical', label:'Technical correctness', weight:40 },
+  { key:'clarity', label:'Explanation clarity', weight:25 },
+  { key:'edgecases', label:'Edge cases considered', weight:15 },
+  { key:'tradeoffs', label:'Trade-offs discussed', weight:10 },
+  { key:'confidence', label:'Confidence & structure', weight:10 },
+];
+let bossClaimRatings = {};
+function renderClaimBossCard(level){
+  const refLabel = level.boss.type==='machinecoding' ? 'UI Machine Coding' : 'Frontend System Design';
+  const refRoute = level.boss.type==='machinecoding' ? 'machine-coding' : 'system-design';
+  const ref = level.boss.type==='machinecoding' ? findById(MACHINE_CODING, level.boss.refId) : findById(SYSTEM_DESIGNS, level.boss.refId);
+  const q = ensureQuestState();
+  const passed = !!q.bossPassed[level.id];
+  return `
+    <p class="small mt-8">Reference challenge: <span class="small" style="cursor:pointer;color:var(--accent-text);" data-nav="${refRoute}/${level.boss.refId}">${escapeHtml(ref?ref.title:level.boss.refId)}</span> (${refLabel}). Do the work for real — in your own editor, within its time limit — then come back and rate yourself honestly.</p>
+    ${passed? `<div class="good-banner mt-8">Boss defeated — best score ${bestBossScore(level.id)}%.</div>`
+      : `<button class="btn btn-primary mt-8" data-action="quest-open-claim" data-level="${level.id}">Claim boss victory</button>`}
+  `;
+}
+PAGE_ACTIONS['quest-open-claim'] = (data)=>{
+  const level = QUEST_LEVELS.find(l=>l.id===parseInt(data.level,10));
+  if(level) openBossClaimModal(level);
+};
+function openBossClaimModal(level){
+  bossClaimRatings = {};
+  openModal({
+    title:'Claim boss victory',
+    bodyHtml:`
+      <p class="small">Rate your own attempt honestly — this only works if you're honest with yourself. Nothing here is auto-graded.</p>
+      ${BOSS_CLAIM_CRITERIA.map(c=>`
+        <div class="field">
+          <label id="crit_${c.key}_label">${escapeHtml(c.label)} (${c.weight}%)</label>
+          <div class="input-row" role="group" aria-labelledby="crit_${c.key}_label">
+            ${[0,25,50,75,100].map(v=>`<button type="button" class="chip" data-action="quest-boss-rate" data-key="${c.key}" data-value="${v}">${v}%</button>`).join('')}
+          </div>
+        </div>
+      `).join('')}
+      <p class="small faint mt-8" id="bossClaimScore" aria-live="polite">Score so far: 0% (need 70% to pass)</p>
+    `,
+    footHtml:`<button class="btn btn-ghost" data-action="close-modal">Cancel</button>
+              <button class="btn btn-primary" id="bossClaimSubmit">Submit</button>`,
+    onOpen:(overlay)=>{
+      overlay.querySelector('#bossClaimSubmit').addEventListener('click', ()=>{
+        const total = BOSS_CLAIM_CRITERIA.reduce((s,c)=> s + (bossClaimRatings[c.key]||0)*c.weight/100, 0);
+        closeModal();
+        resolveClaimBoss(level, Math.round(total));
+      });
+    }
+  });
+}
+PAGE_ACTIONS['quest-boss-rate'] = (data, el)=>{
+  bossClaimRatings[data.key] = parseInt(data.value,10);
+  const row = el.closest('[role="group"]');
+  if(row) row.querySelectorAll('.chip').forEach(c=> c.classList.toggle('active', c===el));
+  const total = BOSS_CLAIM_CRITERIA.reduce((s,c)=> s + (bossClaimRatings[c.key]||0)*c.weight/100, 0);
+  const el2 = document.getElementById('bossClaimScore');
+  if(el2) el2.textContent = `Score so far: ${Math.round(total)}% (need 70% to pass)`;
+};
+function resolveClaimBoss(level, score){
+  const passed = score>=70;
+  recordBossAttempt(level.id, score, passed);
+  if(passed){
+    awardXP(150, `Boss battle passed: ${level.title}`);
+    triggerLevelUp(level);
+  } else {
+    toast(`Boss battle result: ${score}% — under 70%. Retry tomorrow.`);
+  }
+  navigate('quest/'+level.id);
+}
+
+/* project type (Level 9): 4 real project sub-bosses */
+function projectBossSubStatus(project){
+  const specific = project.questions.filter(q=>q.type==='specific');
+  const done = specific.filter(q=> ['confident','mastered'].indexOf(getItem('project',q.id).status)!==-1).length;
+  return { done, total: specific.length, passed: specific.length>0 && done===specific.length };
+}
+function renderProjectBossCard(level){
+  const subs = PROJECTS.map(p=>({ p, s: projectBossSubStatus(p) }));
+  const allPassed = subs.every(x=>x.s.passed);
+  return `
+    <div class="flex flex-col gap-8 mt-8">
+      ${subs.map(({p,s})=>`
+        <div class="item-row">
+          <span class="small" style="cursor:pointer;" data-nav="projects/${p.id}">${escapeHtml(p.name)}</span>
+          <span class="badge ${s.passed?'badge-basic':'badge-outline'}">${s.done}/${s.total} specific questions confident+</span>
+        </div>
+      `).join('')}
+    </div>
+    ${allPassed? `<div class="good-banner mt-8">All four projects defended — boss cleared.</div>` : `<p class="small faint mt-8">Mark every project-specific question confident or mastered on each project's page to clear this boss.</p>`}
+  `;
+}
+function checkProjectBossProgress(){
+  const level = QUEST_LEVELS.find(l=>l.id===9);
+  const q = ensureQuestState();
+  if(q.bossPassed[9]) return;
+  const allPassed = PROJECTS.every(p=>projectBossSubStatus(p).passed);
+  if(allPassed){
+    recordBossAttempt(9, 100, true);
+    awardXP(150, 'Boss battle passed: Project Defender');
+    triggerLevelUp(level);
+  }
+}
+
+/* mockinterview type (Level 10): 4 real mock-interview sub-challenges */
+function renderMockinterviewBossCard(level){
+  const durations = [15,30,45,60];
+  const q = ensureQuestState();
+  return `
+    <div class="flex flex-col gap-8 mt-8">
+      ${durations.map(d=>{
+        const attempts = (q.bossAttempts[10]||[]).filter(a=>a.subId===d);
+        const passed = attempts.some(a=>a.passed);
+        const attemptedToday = bossAttemptedToday(10, d);
+        return `<div class="item-row">
+          <span class="small">${d}-minute mixed round${d===60?' — FINAL BOSS':''}</span>
+          ${passed? '<span class="badge badge-basic">Cleared</span>'
+            : attemptedToday? '<span class="badge badge-outline">Attempted today — retry tomorrow</span>'
+            : `<button class="btn btn-sm" data-action="quest-start-mock-boss" data-level="10" data-duration="${d}">Start</button>`}
+        </div>`;
+      }).join('')}
+    </div>
+    <p class="small faint mt-8">Pass = average self-score of at least 3.5/5. The 60-minute final boss also requires every core project question to have been answered at least once.</p>
+  `;
+}
+PAGE_ACTIONS['quest-start-mock-boss'] = (data)=>{
+  const duration = parseInt(data.duration,10);
+  const started = startMockSession({ categoryId:'mixed', difficulty:'all', duration, pressure:true, questBoss:{ levelId:10, subId:duration } });
+  if(started) navigate('mock-interview');
+};
+function resolveQuestMockBoss(session){
+  const qb = session.questBoss;
+  const summary = session.summary;
+  const scorePct = summary.avgScore ? Math.round((summary.avgScore/5)*100) : 0;
+  let passed = scorePct>=70 && qb.hearts>0;
+  let marksLevelComplete = true;
+  if(qb.levelId===10){
+    marksLevelComplete = (qb.subId===60);
+    if(qb.subId===60){
+      const allAnswered = PROJECTS.every(p=>p.questions.every(q=> getItem('project',q.id).status!=='not_started'));
+      passed = passed && allAnswered;
+    }
+  }
+  recordBossAttempt(qb.levelId, scorePct, passed, qb.subId, marksLevelComplete);
+  const level = QUEST_LEVELS.find(l=>l.id===qb.levelId);
+  if(passed){
+    awardXP(150, `Boss battle passed: ${level?level.title:''}${qb.subId?' ('+qb.subId+'m)':''}`);
+    if(marksLevelComplete) triggerLevelUp(level);
+  } else {
+    toast(qb.hearts<=0 ? 'Boss battle lost — out of hearts. Retry tomorrow.' : `Boss battle result: ${scorePct}% (need 70%). Retry tomorrow.`);
+  }
+}
+
+/* ---------------------- level-up moment ---------------------- */
+function triggerLevelUp(level){
+  if(!level) return;
+  const overlay = document.createElement('div');
+  overlay.className = 'levelup-overlay';
+  overlay.setAttribute('role','status');
+  overlay.innerHTML = `
+    <div class="levelup-card">
+      <div class="levelup-title">Level Up!</div>
+      <div class="levelup-zone">${escapeHtml(level.zone)} cleared</div>
+      <div class="levelup-sub">${escapeHtml(level.title)} — boss defeated</div>
+      <button class="btn btn-primary mt-16" id="levelupContinue">Continue</button>
+    </div>`;
+  document.body.appendChild(overlay);
+  const remove = ()=>{ if(overlay.parentNode) overlay.remove(); };
+  overlay.querySelector('#levelupContinue').addEventListener('click', remove);
+  overlay.addEventListener('click', (e)=>{ if(e.target===overlay) remove(); });
+  setTimeout(remove, 5000);
+}
 
 /* =========================================================================
    BOOT
