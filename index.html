@@ -19029,6 +19029,48 @@ PAGE_ACTIONS['mission-complete'] = (data)=>{
   navigate('quest/'+data.level);
 };
 
+/* ---------------------- Boss intro + results screens ---------------------- */
+function openBossIntroModal(opts){
+  openModal({
+    title: opts.title,
+    bodyHtml: `
+      <p class="small">${escapeHtml(opts.description||'')}</p>
+      <ul class="mt-12">${(opts.stakes||[]).map(s=>`<li class="small">${escapeHtml(s)}</li>`).join('')}</ul>
+    `,
+    footHtml: `<button class="btn btn-ghost" data-action="close-modal">Not yet</button>
+               <button class="btn btn-primary" id="bossIntroBegin">Begin Battle</button>`,
+    onOpen:(overlay)=>{
+      overlay.querySelector('#bossIntroBegin').addEventListener('click', ()=>{
+        closeModal();
+        opts.onBegin();
+      });
+    }
+  });
+}
+function showBossResultsModal(opts){
+  const passed = opts.passed;
+  openModal({
+    title: passed ? 'Boss Defeated!' : 'Boss Battle Lost',
+    bodyHtml: `
+      <p class="small">${passed? `You cleared ${escapeHtml(opts.levelTitle)}.` : `${escapeHtml(opts.levelTitle)} — not this time.`}</p>
+      <div class="grid grid-3 mt-12">
+        <div class="stat-card"><div class="stat-label">Score</div><div class="stat-value">${opts.scorePct}%</div></div>
+        ${opts.heartsRemaining!=null? `<div class="stat-card"><div class="stat-label">Hearts left</div><div class="stat-value">${opts.heartsRemaining}</div></div>` : '<div></div>'}
+        ${passed? `<div class="stat-card"><div class="stat-label">XP earned</div><div class="stat-value">+150</div></div>` : `<div class="stat-card"><div class="stat-label">Retry</div><div class="stat-value">Tomorrow</div></div>`}
+      </div>
+      ${opts.weakAreas&&opts.weakAreas.length? `<div class="mt-12"><p class="small"><strong>Weak areas to review:</strong></p><ul class="mt-8">${opts.weakAreas.slice(0,5).map(w=>`<li class="small">${escapeHtml(w)}</li>`).join('')}</ul></div>` : ''}
+      ${opts.nextLevel? `<div class="good-banner mt-12">Next zone unlocked: ${escapeHtml(opts.nextLevel.zone)} — ${escapeHtml(opts.nextLevel.title)}</div>` : ''}
+    `,
+    footHtml: `<button class="btn btn-primary" id="bossResultsContinue">Continue</button>`,
+    onOpen:(overlay)=>{
+      overlay.querySelector('#bossResultsContinue').addEventListener('click', ()=>{
+        closeModal();
+        if(opts.onContinue) opts.onContinue();
+      });
+    }
+  });
+}
+
 /* ---------------------- Boss card dispatch ---------------------- */
 function renderBossCard(level, status){
   if(status!=='boss_available' && status!=='completed' && status!=='mastered'){
@@ -19070,9 +19112,16 @@ function bestAvailableDifficulty(category){
 PAGE_ACTIONS['quest-start-quiz-boss'] = (data)=>{
   const level = QUEST_LEVELS.find(l=>l.id===parseInt(data.level,10));
   if(!level) return;
-  const difficulty = bestAvailableDifficulty(level.boss.category);
-  const started = startMockSession({ categoryId: level.boss.category, difficulty, duration: level.boss.duration, pressure:true, questBoss:{ levelId: level.id } });
-  if(started) navigate('mock-interview');
+  openBossIntroModal({
+    title: `Boss Battle: ${level.title}`,
+    description: level.boss.description,
+    stakes: [`${level.boss.duration} minutes, no pausing`, '3 hearts — revealing an answer before scoring it costs one', 'Need a 70% average to pass'],
+    onBegin: ()=>{
+      const difficulty = bestAvailableDifficulty(level.boss.category);
+      const started = startMockSession({ categoryId: level.boss.category, difficulty, duration: level.boss.duration, pressure:true, questBoss:{ levelId: level.id } });
+      if(started) navigate('mock-interview');
+    }
+  });
 };
 
 /* coding type: solve specific real coding problems */
@@ -19109,8 +19158,13 @@ PAGE_ACTIONS['quest-claim-coding-boss'] = (data)=>{
   if(prog.pct<70) return;
   recordBossAttempt(level.id, prog.pct, true);
   awardXP(150, `Boss battle passed: ${level.title}`, `boss:${level.id}:pass`);
-  triggerLevelUp(level);
-  navigate('quest/'+level.id);
+  const weakAreas = level.boss.codingIds.filter(id=> getItem('coding',id).codingProgress!=='solved_no_help')
+    .map(id=>{ const c=findById(CODING_PROBLEMS,id); return c?c.title:id; });
+  const nextLevel = QUEST_LEVELS.find(l=>l.id===level.id+1);
+  showBossResultsModal({
+    levelTitle: level.title, passed:true, scorePct: prog.pct, heartsRemaining:null, weakAreas, nextLevel,
+    onContinue: ()=>{ triggerLevelUp(level); navigate('quest/'+level.id); }
+  });
 };
 
 /* machinecoding / systemdesign type: honest 5-criteria self-rating claim */
@@ -19122,6 +19176,17 @@ const BOSS_CLAIM_CRITERIA = [
   { key:'confidence', label:'Confidence & structure', weight:10 },
 ];
 let bossClaimRatings = {};
+let bossClaimReflection = {};
+const BOSS_REFLECTION_FIELDS = [
+  { key:'approach', label:'Your approach / component breakdown' },
+  { key:'edgecases', label:'Edge cases you handled' },
+  { key:'tradeoffs', label:'Trade-offs you considered' },
+  { key:'reflection', label:"What would you do differently next time?" },
+];
+const BOSS_REFLECTION_MIN_CHARS = 20;
+function bossClaimCanSubmit(){
+  return BOSS_REFLECTION_FIELDS.every(f=> (bossClaimReflection[f.key]||'').trim().length>=BOSS_REFLECTION_MIN_CHARS);
+}
 function renderClaimBossCard(level){
   const refLabel = level.boss.type==='machinecoding' ? 'UI Machine Coding' : 'Frontend System Design';
   const refRoute = level.boss.type==='machinecoding' ? 'machine-coding' : 'system-design';
@@ -19140,24 +19205,49 @@ PAGE_ACTIONS['quest-open-claim'] = (data)=>{
 };
 function openBossClaimModal(level){
   bossClaimRatings = {};
+  bossClaimReflection = {};
   openModal({
     title:'Claim boss victory',
     bodyHtml:`
-      <p class="small">Rate your own attempt honestly — this only works if you're honest with yourself. Nothing here is auto-graded.</p>
-      ${BOSS_CLAIM_CRITERIA.map(c=>`
+      <p class="small">Write these out for real first — scoring unlocks once every field below has real substance. This is what stops "click five 100% buttons and pass."</p>
+      ${BOSS_REFLECTION_FIELDS.map(f=>`
         <div class="field">
-          <label id="crit_${c.key}_label">${escapeHtml(c.label)} (${c.weight}%)</label>
-          <div class="input-row" role="group" aria-labelledby="crit_${c.key}_label">
-            ${[0,25,50,75,100].map(v=>`<button type="button" class="chip" data-action="quest-boss-rate" data-key="${c.key}" data-value="${v}">${v}%</button>`).join('')}
-          </div>
+          <label for="reflect_${f.key}">${escapeHtml(f.label)}</label>
+          <textarea id="reflect_${f.key}" data-reflect="${f.key}" rows="2" placeholder="At least ${BOSS_REFLECTION_MIN_CHARS} characters..."></textarea>
         </div>
       `).join('')}
-      <p class="small faint mt-8" id="bossClaimScore" aria-live="polite">Score so far: 0% (need 70% to pass)</p>
+      <hr class="mt-12">
+      <p class="small faint mt-8" id="bossClaimGate">Fill in every field above to unlock scoring.</p>
+      <div id="bossClaimRatingBlock" style="display:none;">
+        <p class="small mt-8">Now rate your own attempt honestly — nothing here is auto-graded.</p>
+        ${BOSS_CLAIM_CRITERIA.map(c=>`
+          <div class="field">
+            <label id="crit_${c.key}_label">${escapeHtml(c.label)} (${c.weight}%)</label>
+            <div class="input-row" role="group" aria-labelledby="crit_${c.key}_label">
+              ${[0,25,50,75,100].map(v=>`<button type="button" class="chip" data-action="quest-boss-rate" data-key="${c.key}" data-value="${v}">${v}%</button>`).join('')}
+            </div>
+          </div>
+        `).join('')}
+        <p class="small faint mt-8" id="bossClaimScore" aria-live="polite">Score so far: 0% (need 70% to pass)</p>
+      </div>
     `,
     footHtml:`<button class="btn btn-ghost" data-action="close-modal">Cancel</button>
-              <button class="btn btn-primary" id="bossClaimSubmit">Submit</button>`,
+              <button class="btn btn-primary" id="bossClaimSubmit" disabled>Submit</button>`,
     onOpen:(overlay)=>{
-      overlay.querySelector('#bossClaimSubmit').addEventListener('click', ()=>{
+      const ratingBlock = overlay.querySelector('#bossClaimRatingBlock');
+      const gateMsg = overlay.querySelector('#bossClaimGate');
+      const submitBtn = overlay.querySelector('#bossClaimSubmit');
+      overlay.querySelectorAll('[data-reflect]').forEach(ta=>{
+        ta.addEventListener('input', ()=>{
+          bossClaimReflection[ta.dataset.reflect] = ta.value;
+          const unlocked = bossClaimCanSubmit();
+          ratingBlock.style.display = unlocked ? '' : 'none';
+          gateMsg.style.display = unlocked ? 'none' : '';
+          submitBtn.disabled = !(unlocked && BOSS_CLAIM_CRITERIA.every(c=>bossClaimRatings[c.key]!==undefined));
+        });
+      });
+      submitBtn.addEventListener('click', ()=>{
+        if(submitBtn.disabled) return;
         const total = BOSS_CLAIM_CRITERIA.reduce((s,c)=> s + (bossClaimRatings[c.key]||0)*c.weight/100, 0);
         closeModal();
         resolveClaimBoss(level, Math.round(total));
@@ -19172,18 +19262,20 @@ PAGE_ACTIONS['quest-boss-rate'] = (data, el)=>{
   const total = BOSS_CLAIM_CRITERIA.reduce((s,c)=> s + (bossClaimRatings[c.key]||0)*c.weight/100, 0);
   const el2 = document.getElementById('bossClaimScore');
   if(el2) el2.textContent = `Score so far: ${Math.round(total)}% (need 70% to pass)`;
+  const submitBtn = document.getElementById('bossClaimSubmit');
+  if(submitBtn) submitBtn.disabled = !(bossClaimCanSubmit() && BOSS_CLAIM_CRITERIA.every(c=>bossClaimRatings[c.key]!==undefined));
 };
 function resolveClaimBoss(level, score){
   if(ensureQuestState().bossPassed[level.id]) { navigate('quest/'+level.id); return; }
   const passed = score>=70;
   recordBossAttempt(level.id, score, passed);
-  if(passed){
-    awardXP(150, `Boss battle passed: ${level.title}`, `boss:${level.id}:pass`);
-    triggerLevelUp(level);
-  } else {
-    toast(`Boss battle result: ${score}% — under 70%. Retry tomorrow.`);
-  }
-  navigate('quest/'+level.id);
+  if(passed) awardXP(150, `Boss battle passed: ${level.title}`, `boss:${level.id}:pass`);
+  const weakAreas = BOSS_CLAIM_CRITERIA.filter(c=> (bossClaimRatings[c.key]||0)<=50).map(c=>c.label);
+  const nextLevel = passed ? QUEST_LEVELS.find(l=>l.id===level.id+1) : null;
+  showBossResultsModal({
+    levelTitle: level.title, passed, scorePct: score, heartsRemaining: null, weakAreas, nextLevel,
+    onContinue: ()=>{ if(passed) triggerLevelUp(level); navigate('quest/'+level.id); }
+  });
 }
 
 /* project type (Level 9): 4 real project sub-bosses */
@@ -19215,7 +19307,11 @@ function checkProjectBossProgress(){
   if(allPassed){
     recordBossAttempt(9, 100, true);
     awardXP(150, 'Boss battle passed: Project Defender', 'boss:9:pass');
-    triggerLevelUp(level);
+    const nextLevel = QUEST_LEVELS.find(l=>l.id===10);
+    showBossResultsModal({
+      levelTitle: level.title, passed:true, scorePct:100, heartsRemaining:null, weakAreas:[], nextLevel,
+      onContinue: ()=>{ triggerLevelUp(level); navigate('quest/9'); }
+    });
   }
 }
 
@@ -19237,23 +19333,36 @@ function renderMockinterviewBossCard(level){
         </div>`;
       }).join('')}
     </div>
-    <p class="small faint mt-8">Pass = average self-score of at least 3.5/5. The 60-minute final boss also requires every core project question to have been answered at least once.</p>
+    <p class="small faint mt-8">Pass = average self-score of at least 3.5/5. The 60-minute final boss needs at least 4/5, at least one heart remaining, and every core project question answered at least once.</p>
   `;
 }
 PAGE_ACTIONS['quest-start-mock-boss'] = (data)=>{
   const duration = parseInt(data.duration,10);
-  const started = startMockSession({ categoryId:'mixed', difficulty:'all', duration, pressure:true, questBoss:{ levelId:10, subId:duration } });
-  if(started) navigate('mock-interview');
+  const level = QUEST_LEVELS.find(l=>l.id===parseInt(data.level,10));
+  const isFinal = duration===60;
+  openBossIntroModal({
+    title: isFinal ? 'FINAL BOSS: Interview Arena' : `Boss Battle: ${duration}-minute mixed round`,
+    description: level ? level.boss.description : '',
+    stakes: isFinal
+      ? ['60 minutes, no pausing', '3 hearts', 'Need an average self-score of at least 4/5 to pass', 'Every core project question must have been answered at least once']
+      : [`${duration} minutes, no pausing`, '3 hearts', 'Need an average self-score of at least 3.5/5 to pass'],
+    onBegin: ()=>{
+      const started = startMockSession({ categoryId:'mixed', difficulty:'all', duration, pressure:true, questBoss:{ levelId:10, subId:duration } });
+      if(started) navigate('mock-interview');
+    }
+  });
 };
 function resolveQuestMockBoss(session){
   const qb = session.questBoss;
   const summary = session.summary;
   const scorePct = summary.avgScore ? Math.round((summary.avgScore/5)*100) : 0;
-  let passed = scorePct>=70 && qb.hearts>0;
+  const isFinalBoss = qb.levelId===10 && qb.subId===60;
+  const passThreshold = isFinalBoss ? 4 : 3.5;
+  let passed = (summary.avgScore||0) >= passThreshold && qb.hearts>0;
   let marksLevelComplete = true;
   if(qb.levelId===10){
     marksLevelComplete = (qb.subId===60);
-    if(qb.subId===60){
+    if(isFinalBoss){
       const allAnswered = PROJECTS.every(p=>p.questions.every(q=> getItem('project',q.id).status!=='not_started'));
       passed = passed && allAnswered;
     }
@@ -19262,10 +19371,13 @@ function resolveQuestMockBoss(session){
   const level = QUEST_LEVELS.find(l=>l.id===qb.levelId);
   if(passed){
     awardXP(150, `Boss battle passed: ${level?level.title:''}${qb.subId?' ('+qb.subId+'m)':''}`, `boss:${qb.levelId}:pass:${qb.subId||'main'}`);
-    if(marksLevelComplete) triggerLevelUp(level);
-  } else {
-    toast(qb.hearts<=0 ? 'Boss battle lost — out of hearts. Retry tomorrow.' : `Boss battle result: ${scorePct}% (need 70%). Retry tomorrow.`);
   }
+  const nextLevel = (passed && marksLevelComplete) ? QUEST_LEVELS.find(l=>l.id===qb.levelId+1) : null;
+  showBossResultsModal({
+    levelTitle: `${level?level.title:''}${qb.subId?' ('+qb.subId+'m)':''}`,
+    passed, scorePct, heartsRemaining: qb.hearts, weakAreas: summary.weakTopics||[], nextLevel,
+    onContinue: ()=>{ if(passed && marksLevelComplete) triggerLevelUp(level); }
+  });
 }
 
 /* ---------------------- level-up moment ---------------------- */
